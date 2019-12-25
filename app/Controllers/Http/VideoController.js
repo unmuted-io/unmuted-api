@@ -40,6 +40,7 @@ class VideoController {
    * @param {View} ctx.view
    */
   async create ({ request, response, view }) {
+
   }
 
   /**
@@ -51,6 +52,18 @@ class VideoController {
    * @param {Response} ctx.response
    */
   async store ({ request, response }) {
+    console.log('store request: ', request.all())
+    const file = request.file('file')
+    // console.log('file: ', file)
+    await file.move('public', {
+      name: 'myUpload.mp4',
+      overwrite: false
+    })
+
+    if (!file.moved()) {
+      return file.error()
+    }
+    return 'File moved'
   }
 
   /**
