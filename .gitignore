@@ -9,3 +9,6 @@ tmp
 
 # The development sqlite file
 database/*.sqlite
+
+# Directory for video files (unused in productions)
+public/videos

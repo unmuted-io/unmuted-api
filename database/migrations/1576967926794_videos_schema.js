@@ -7,7 +7,9 @@ class VideosSchema extends Schema {
   up () {
     this.create('videos', (table) => {
       table.string('title')
+      table.string('description')
       table.string('source')
+      table.string('rand')
       table.increments()
       table.timestamps()
     })

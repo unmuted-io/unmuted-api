@@ -1,5 +1,6 @@
 'use strict'
-
+const crypto = require('crypto')
+const base32 = require('hi-base32')
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
 /** @typedef {import('@adonisjs/framework/src/Response')} Response */
 /** @typedef {import('@adonisjs/framework/src/View')} View */
@@ -52,18 +53,33 @@ class VideoController {
    * @param {Response} ctx.response
    */
   async store ({ request, response }) {
-    console.log('store request: ', request.all())
     const file = request.file('file')
-    // console.log('file: ', file)
-    await file.move('public', {
-      name: 'myUpload.mp4',
-      overwrite: false
+    const { tmpPath } = file
+    let rand = await crypto.randomBytes(8)
+    rand = base32.encode(rand).replace(/===/i, '');
+
+    const time = (new Date()).getTime()
+    const source = `${time}-${rand}.mp4`
+    await file.move('public/videos', {
+      name: source,
+      overwrite: false,
+      size: '2gb',
+      types: ['video']
+    })
+    if (!file.moved()) {
+      response.status(500).send({
+        message: 'There was an error uploading your video. Please try again later.'
+      })
+    }
+    const video = await Video.create({
+      ...request.all(),
+      source,
+      rand
     })
 
-    if (!file.moved()) {
-      return file.error()
-    }
-    return 'File moved'
+    response.send({
+      path: source
+    })
   }
 
   /**
