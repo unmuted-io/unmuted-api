@@ -94,7 +94,8 @@ class VideoController {
    */
   async show ({ params, request, response, view }) {
     const { id } = params
-    return await Database.table('videos').where('rand', id)
+    const video = await Database.table('videos').where('rand', id)
+    return video
   }
 
   /**
