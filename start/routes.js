@@ -20,6 +20,4 @@ Route.get('/', () => {
   return { greeting: 'Hello world in JSON' }
 })
 
-// Route.get('/videos', 'VideoController.index')
-
-Route.post('videos', 'VideoController.store')
+Route.resource('videos', 'VideoController')

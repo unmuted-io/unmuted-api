@@ -13,6 +13,7 @@ const base32 = require('hi-base32')
 
 // set namespace
 const Video = use('App/Models/Video')
+const Database = use('Database')
 
 class VideoController {
   /**
@@ -78,13 +79,13 @@ class VideoController {
     })
 
     response.send({
-      path: source
+      rand
     })
   }
 
   /**
    * Display a single video.
-   * GET videos/:id
+   * GET videos/:rand
    *
    * @param {object} ctx
    * @param {Request} ctx.request
@@ -92,6 +93,8 @@ class VideoController {
    * @param {View} ctx.view
    */
   async show ({ params, request, response, view }) {
+    const { id } = params
+    return await Database.table('videos').where('rand', id)
   }
 
   /**
