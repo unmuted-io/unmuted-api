@@ -10,6 +10,7 @@ class VideosSchema extends Schema {
       table.string('description', 5000)
       table.string('source')
       table.string('rand')
+      table.boolean('processed').defaultTo(false)
       table.increments()
       table.timestamps()
     })

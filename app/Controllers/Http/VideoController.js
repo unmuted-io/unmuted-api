@@ -1,6 +1,9 @@
 'use strict'
 const crypto = require('crypto')
 const base32 = require('hi-base32')
+var ffmpeg = require('fluent-ffmpeg')
+var command = ffmpeg()
+
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
 /** @typedef {import('@adonisjs/framework/src/Response')} Response */
 /** @typedef {import('@adonisjs/framework/src/View')} View */
@@ -55,12 +58,15 @@ class VideoController {
    */
   async store ({ request, response }) {
     const file = request.file('file')
-    const { tmpPath } = file
+
     let rand = await crypto.randomBytes(8)
+    // make a random string
     rand = base32.encode(rand).replace(/===/i, '');
 
     const time = (new Date()).getTime()
+    // set the source filename
     const source = `${time}-${rand}.mp4`
+    // move the file from temp to public folder
     await file.move('public/videos', {
       name: source,
       overwrite: false,
@@ -72,11 +78,24 @@ class VideoController {
         message: 'There was an error uploading your video. Please try again later.'
       })
     }
+    // create the entry in the database
     const video = await Video.create({
       ...request.all(),
       source,
       rand
     })
+
+    // process the movie file
+    ffmpeg(`public/videos/${source}`)
+      .videoCodec('libx264')
+      .fps(29.7)
+      .on('error', function(err) {
+        console.log('An error occurred: ' + err.message);
+      })
+      .on('end', function() {
+        console.log('Processing finished !');
+      })
+      .save(`public/videos/processed/${source}`)
 
     response.send({
       rand

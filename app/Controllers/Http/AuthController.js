@@ -8,15 +8,12 @@ class AuthController {
     const email = request.input("email")
     const password = request.input("password")
     let user = new User()
-    const randInt = Math.floor(Math.random() * 100000)
-    user.username = username + randInt
-    user.email = email + randInt
+    user.username = username
+    user.email = email
     user.password = password
     user = await user.save()
     let thisUser = await User.findBy('email', email)
-    // console.log('thisUser: ', thisUser)
     const accessToken = await auth.generate(thisUser)
-    // console.log('accessToken is; ', accessToken)
     return response.json({"user": user, "access_token": accessToken})
   }
 
