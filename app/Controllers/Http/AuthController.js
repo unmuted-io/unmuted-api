@@ -26,7 +26,6 @@ class AuthController {
         let accessToken = await auth.generate(user)
         return response.json({"user":user, "access_token": accessToken})
       }
-
     }
     catch (e) {
       return response.json({message: 'You first need to register!'})

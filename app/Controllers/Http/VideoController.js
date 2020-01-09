@@ -86,20 +86,24 @@ class VideoController {
     })
 
     // process the movie file
-    ffmpeg(`public/videos/${source}`)
+    await ffmpeg(`public/videos/${source}`)
       .videoCodec('libx264')
       .fps(29.7)
+      .size('720x480')
       .on('error', function(err) {
         console.log('An error occurred: ' + err.message);
       })
       .on('end', function() {
-        console.log('Processing finished !');
+        console.log('Processing finished !')
+        response.send({
+          rand
+        })
       })
       .save(`public/videos/processed/${source}`)
 
-    response.send({
-      rand
-    })
+      response.send({
+        rand
+      })
   }
 
   /**
