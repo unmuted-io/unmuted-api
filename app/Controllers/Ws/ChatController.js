@@ -1,5 +1,6 @@
 'use strict'
 const { createDfuseClient, waitFor, dynamicMessageDispatcher } = require("@dfuse/client")
+const crypto = require("crypto")
 global.fetch = require('node-fetch')
 global.WebSocket = require('ws')
 
@@ -89,6 +90,40 @@ class ChatController {
         console.log("Stream completed")
       }
     })
+
+    try {
+      setInterval(() => {
+        const timestamp = Date.now()
+        const randomExponent = Math.random() * 3
+        console.log('randomExponent: ', randomExponent)
+        const quantity = Math.pow(10, randomExponent)
+        console.log('quantity: ', quantity)
+        const content = crypto.randomBytes(20).toString('hex')
+        const output = {
+          username: 'CaptainCrypto',
+          content,
+          amount: `${quantity} EOS`,
+          timestamp
+        }
+        console.log('Transaction: ', output)
+        this.socket.broadcastToAll('message', output)
+      }, 2000)
+    } catch (e) {
+      setInterval(() => {
+        const timestamp = Date.now()
+        const randomExponent = Math.random() * 4
+        const quantity = Math.pow(10, randomExponent)
+        const content = crypto.randomBytes(20).toString('hex')
+        const output = {
+          username: 'CaptainCrypto',
+          content,
+          amount: `${quantity} EOS`,
+          timestamp
+        }
+        console.log('Transaction: ', output)
+        this.socket.broadcastToAll('message', output)
+      }, 2000)
+    }
   }
 }
 
