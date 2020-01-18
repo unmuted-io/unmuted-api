@@ -8,7 +8,15 @@ class ChatController {
   }
 
   onMessage (message) {
-    this.socket.broadcastToAll('message', message)
+    console.log('chat message is: ', message)
+    const timestamp = Date.now()
+    const output = {
+      username: message.username,
+      content: message.content,
+      timestamp
+    }
+    console.log('output: ', output)
+    this.socket.broadcastToAll('message', output)
   }
 
   onClose () {
