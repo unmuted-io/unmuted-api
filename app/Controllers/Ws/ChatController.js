@@ -47,6 +47,7 @@ class ChatController {
     }`
 
     const stream = await client.graphql(streamTransfer, (message) => {
+      console.log('message is: ', message)
       if (message.type === "error") {
         console.log("An error occurred", message.errors, message.terminal)
       }
@@ -58,6 +59,27 @@ class ChatController {
         actions.forEach(({ json }) => {
           const { from, to, quantity, memo } = json
           console.log(`Transfer [${from} -> ${to}, ${quantity}] (${memo})`)
+          if (memo) {
+            try {
+              const data = JSON.parse(memo)
+              console.log('data is: ', data)
+              if (data === 'dStream') {
+                const timestamp = Date.now()
+                console.log('timestamp is: ', timestamp)
+                if (!data.u || !data.c || !data.quantity) return
+                const output = {
+                  username: data.u,
+                  content: data.c,
+                  amount: data.quantity,
+                  timestamp
+                }
+                console.log('Transaction: ', output)
+                this.socket.broadcastToAll('message', output)
+              }
+            } catch (e) {
+              console.log('memo parsing error: ', e)
+            }
+          }
         })
 
         stream.mark({ cursor: data.cursor })
