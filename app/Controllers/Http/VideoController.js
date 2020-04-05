@@ -35,6 +35,13 @@ class VideoController {
     }
   }
 
+  async getRecommended ({ request, response, view }) {
+    const videos = await Video.all()
+    return {
+      videos
+    }
+  }
+
   /**
    * Render a form to be used for creating a new video.
    * GET videos/create

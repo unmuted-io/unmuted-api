@@ -25,6 +25,7 @@ Route.put('/videos/:id', 'VideoController.update').middleware('auth')
 Route.delete('/videos/id', 'VideoController.destroy').middleware('auth')
 Route.post('/videos', 'VideoController.store').middleware('auth')
 Route.get('/videos', 'VideoController.index')
+Route.get('/videos/rec', 'VideoController.getRecommended')
 Route.get('/videos/:id', 'VideoController.show')
 Route.get('/videos/processed/:id', 'VideoController.show') // may need to be changed later
 
