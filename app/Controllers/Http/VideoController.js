@@ -35,8 +35,9 @@ class VideoController {
     }
   }
 
-  async getRecommended ({ request, response, view }) {
-    const videos = await Video.all()
+  async getRecommended ({ params, request, response, view }) {
+    const { quantity } = params
+    const videos = await Database.table('videos').limit(20).orderBy('created_at', 'desc')
     return {
       videos
     }
