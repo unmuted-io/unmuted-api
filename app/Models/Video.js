@@ -8,6 +8,10 @@ class Video extends Model {
   // static get hidden () {
   //   return ['id']
   // }
+
+  user () {
+    return this.belongsTo('App/Models/User')
+  }
 }
 
 module.exports = Video
