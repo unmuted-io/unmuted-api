@@ -37,7 +37,8 @@ class VideoController {
 
   async getRecommended ({ params, request, response, view }) {
     const { quantity } = params
-    const videos = await Database.table('videos').limit(20).orderBy('created_at', 'desc')
+    const limit = quantity ? quantity : 20
+    const videos = await Database.table('videos').limit(limit).orderBy('created_at', 'desc')
     return {
       videos
     }
