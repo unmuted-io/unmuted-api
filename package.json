@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node ace test",
+    "serve:dev": "nodemon --watch app --watch config --watch database --watch public --watch start --watch bootstrap --watch config --watch .env server.js",
     "nodemon": "nodemon server.js"
   },
   "keywords": [
