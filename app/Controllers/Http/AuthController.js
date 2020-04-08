@@ -3,7 +3,7 @@
 const User = use('App/Models/User')
 
 class AuthController {
-  async register({request, auth, response}) {
+  register = async ({ request, auth, response }) => {
     const username = request.input("username")
     const email = request.input("email")
     const password = request.input("password")
@@ -17,7 +17,7 @@ class AuthController {
     return response.json({"user": user, "access_token": accessToken})
   }
 
-  async login({request, auth, response}) {
+  login = async ({ request, auth, response }) => {
     const email = request.input("email")
     const password = request.input("password");
     try {
@@ -30,6 +30,22 @@ class AuthController {
     catch (e) {
       return response.json({message: 'You first need to register!'})
     }
+  }
+
+  checkUsername = async ({ request, auth, response }) => {
+    const { username } = request.params
+    const result = await User.findBy('username', username)
+    const isAvailable = result ? false : true
+    return response.json({ isAvailable })
+  }
+
+  updateUsername = async ({ request, auth, response }) => {
+    const body = request.post()
+    const { email, username } = body
+    const user = await User.findBy('email', email)
+    user.username = username
+    await user.save()
+    return response.json({ username: user.username })
   }
 }
 

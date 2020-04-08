@@ -32,3 +32,5 @@ Route.get('/videos/processed/:id', 'VideoController.show') // may need to be cha
 
 Route.post('/auth/register', 'AuthController.register')
 Route.post('/auth/login', 'AuthController.login')
+Route.get('/auth/username/:username', 'AuthController.checkUsername')
+Route.put('/auth/username', 'AuthController.updateUsername')
