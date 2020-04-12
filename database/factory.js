@@ -44,7 +44,7 @@ Factory.blueprint('App/Models/Video', async (faker) => {
     processed: 1,
     source,
     rand,
-    user_id: Math.floor(Math.random() * 100)
+    user_id: Math.floor(Math.random() * 90) + 1
 
   }
 })

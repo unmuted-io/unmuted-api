@@ -39,6 +39,12 @@ class AuthController {
     return response.json({ isAvailable })
   }
 
+  getUserByParam = async ({ request, auth, response }) => {
+    const { field, value } = request.params
+    const result = await User.findBy(field, value)
+    return response.json(result)
+  }
+
   updateUsername = async ({ request, auth, response }) => {
     const body = request.post()
     const { email, username } = body
