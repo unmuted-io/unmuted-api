@@ -5,9 +5,8 @@
   "description": "Adonisjs boilerplate for API server with pre-configured JWT",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
     "test": "node ace test",
-    "serve:dev": "nodemon --watch app --watch config --watch database --watch public --watch start --watch bootstrap --watch config --watch .env server.js",
+    "start": "nodemon --watch app --watch config --watch database --watch public --watch start --watch bootstrap --watch config --watch .env server.js",
     "nodemon": "nodemon server.js"
   },
   "keywords": [
@@ -30,14 +29,18 @@
     "@adonisjs/session": "^1.0.29",
     "@adonisjs/vow": "^1.0.17",
     "@adonisjs/websocket": "^1.0.12",
+    "@dfuse/client": "^0.3.8",
     "@typescript-eslint/eslint-plugin": "^2.26.0",
+    "@typescript-eslint/parser": "^2.27.0",
     "crypto": "^1.0.1",
     "ffmpeg": "^0.0.4",
     "fluent-ffmpeg": "^2.1.2",
     "handbrake-js": "^5.0.0",
     "hi-base32": "^0.5.0",
     "mysql": "^2.17.1",
-    "typescript": "^3.8.3"
+    "node-fetch": "^2.6.0",
+    "typescript": "^3.8.3",
+    "ws": "^7.2.3"
   },
   "devDependencies": {
     "eslint": "^6.8.0",
