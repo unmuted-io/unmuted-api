@@ -3,7 +3,7 @@
 const Env = use('Env')
 
 module.exports = {
-  /*
+	/*
   |--------------------------------------------------------------------------
   | Session Driver
   |--------------------------------------------------------------------------
@@ -14,9 +14,9 @@ module.exports = {
   | For `redis` driver, make sure to install and register `@adonisjs/redis`
   |
   */
-  driver: Env.get('SESSION_DRIVER', 'cookie'),
+	driver: Env.get('SESSION_DRIVER', 'cookie'),
 
-  /*
+	/*
   |--------------------------------------------------------------------------
   | Cookie Name
   |--------------------------------------------------------------------------
@@ -25,9 +25,9 @@ module.exports = {
   | are signed and encrypted.
   |
   */
-  cookieName: 'adonis-session',
+	cookieName: 'adonis-session',
 
-  /*
+	/*
   |--------------------------------------------------------------------------
   | Clear session when browser closes
   |--------------------------------------------------------------------------
@@ -36,9 +36,9 @@ module.exports = {
   | removed when browser closes.
   |
   */
-  clearWithBrowser: true,
+	clearWithBrowser: true,
 
-  /*
+	/*
   |--------------------------------------------------------------------------
   | Session age
   |--------------------------------------------------------------------------
@@ -51,9 +51,9 @@ module.exports = {
   |  '2h', '10d', '5y', '2.5 hrs'
   |
   */
-  age: '2h',
+	age: '2h',
 
-  /*
+	/*
   |--------------------------------------------------------------------------
   | Cookie options
   |--------------------------------------------------------------------------
@@ -62,13 +62,13 @@ module.exports = {
   | cookie
   |
   */
-  cookie: {
-    httpOnly: true,
-    path: '/',
-    sameSite: true // change?
-  },
+	cookie: {
+		httpOnly: true,
+		path: '/',
+		sameSite: true // change?
+	},
 
-  /*
+	/*
   |--------------------------------------------------------------------------
   | Sessions location
   |--------------------------------------------------------------------------
@@ -77,11 +77,11 @@ module.exports = {
   | the temporary path or absolute url to any location.
   |
   */
-  file: {
-    location: 'sessions'
-  },
+	file: {
+		location: 'sessions'
+	},
 
-  /*
+	/*
   |--------------------------------------------------------------------------
   | Redis config
   |--------------------------------------------------------------------------
@@ -89,11 +89,11 @@ module.exports = {
   | The configuration for the redis driver.
   |
   */
-  redis: {
-    host: '127.0.0.1',
-    port: 6379,
-    password: null,
-    db: 0,
-    keyPrefix: ''
-  }
+	redis: {
+		host: '127.0.0.1',
+		port: 6379,
+		password: null,
+		db: 0,
+		keyPrefix: ''
+	}
 }

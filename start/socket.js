@@ -15,5 +15,5 @@
 
 const Ws = use('Ws')
 console.log('socket connecting to ChatController')
-Ws.channel('/chat:*', 'ChatController') // ChatUpdateController
+Ws.channel('/chat', 'ChatController') // ChatUpdateController
 // .middleware(['auth'])

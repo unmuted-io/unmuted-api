@@ -23,28 +23,28 @@ const base32 = require('hi-base32')
 // })
 
 Factory.blueprint('App/Models/User', async (faker) => {
-  return {
-    username: faker.username(),
-    email: faker.email(),
-    password: faker.password()
-  }
+	return {
+		username: faker.username(),
+		email: faker.email(),
+		password: faker.password()
+	}
 })
 
 Factory.blueprint('App/Models/Video', async (faker) => {
-  let rand = await crypto.randomBytes(8)
-  // make a random string
-  rand = base32.encode(rand).replace(/===/i, '');
+	let rand = await crypto.randomBytes(8)
+	// make a random string
+	rand = base32.encode(rand).replace(/===/i, '')
 
-  const time = (new Date()).getTime()
-  // set the source filename
-  const source = `${time}-${rand}.mp4`
-  return {
-    title: faker.sentence(),
-    description: faker.paragraph(),
-    processed: 1,
-    source,
-    rand,
-    user_id: Math.floor(Math.random() * 90) + 1
+	const time = (new Date()).getTime()
+	// set the source filename
+	const source = `${time}-${rand}.mp4`
+	return {
+		title: faker.sentence(),
+		description: faker.paragraph(),
+		processed: 1,
+		source,
+		rand,
+		user_id: Math.floor(Math.random() * 90) + 1
 
-  }
+	}
 })
