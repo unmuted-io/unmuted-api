@@ -107,7 +107,7 @@ class ChatController {
         }
         console.log('Transaction: ', output)
         this.socket.broadcastToAll('message', output)
-      }, 2000)
+      }, 20000)
     } catch (e) {
       setInterval(() => {
         const timestamp = Date.now()
@@ -122,7 +122,7 @@ class ChatController {
         }
         console.log('Transaction: ', output)
         this.socket.broadcastToAll('message', output)
-      }, 2000)
+      }, 20000)
     }
   }
 }
