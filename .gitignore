@@ -12,3 +12,6 @@ database/*.sqlite
 
 # Directory for video files (unused in productions)
 public/videos
+
+yarn-error.log
+dump.rdb
