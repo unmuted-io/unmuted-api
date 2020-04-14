@@ -95,9 +95,7 @@ class ChatController {
 			setInterval(() => {
 				const timestamp = Date.now()
 				const randomExponent = Math.random() * 3
-				console.log('randomExponent: ', randomExponent)
 				const quantity = Math.pow(10, randomExponent)
-				console.log('quantity: ', quantity)
 				const content = crypto.randomBytes(20).toString('hex')
 				const output = {
 					username: 'CaptainCrypto',
@@ -105,7 +103,6 @@ class ChatController {
 					amount: `${quantity} EOS`,
 					timestamp
 				}
-				console.log('Transaction: ', output)
 				this.socket.broadcastToAll('message', output)
 			}, 20000)
 		} catch (e) {
