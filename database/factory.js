@@ -48,3 +48,12 @@ Factory.blueprint('App/Models/Video', async (faker) => {
 
 	}
 })
+
+Factory.blueprint('App/Models/View', async (faker) => {
+	return {
+		video_id: Math.floor(Math.random() * 100),
+		user_id: Math.floor(Math.random() * 100),
+		last_position: Math.floor(Math.random() * 20),
+		count: Math.floor(Math.random() * 4)
+	}
+})
