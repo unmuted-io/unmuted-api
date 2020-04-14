@@ -4,6 +4,10 @@
 const Model = use('Model')
 
 class View extends Model {
+	static get hidden () {
+		return ['id']
+	}
+
 	user () {
 		return this.hasMany('App/Models/User')
 	}

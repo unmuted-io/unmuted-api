@@ -49,11 +49,26 @@ Factory.blueprint('App/Models/Video', async (faker) => {
 	}
 })
 
+let user_id = 1
+let video_id = 1
 Factory.blueprint('App/Models/View', async (faker) => {
-	return {
-		video_id: Math.floor(Math.random() * 100),
-		user_id: Math.floor(Math.random() * 100),
-		last_position: Math.floor(Math.random() * 20),
-		count: Math.floor(Math.random() * 4)
+	let last_position = Math.floor(Math.random() * 20)
+	let count = 3
+	if (user_id === 1) {
+		count = Math.floor(Math.random() * 70)
 	}
+	const output = {
+		video_id,
+		user_id,
+		last_position,
+		count
+	}
+	if (user_id < 100) {
+		user_id++
+	} else {
+		user_id = 1
+		video_id++
+	}
+
+	return output
 })

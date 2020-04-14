@@ -5,9 +5,10 @@ const Model = use('Model')
 
 class Video extends Model {
 	// this clause does not appear to be working
-	// static get hidden () {
-	//   return ['id']
-	// }
+	static get hidden () {
+	  return ['id']
+	}
+
 
 	user () {
 		return this.belongsTo('App/Models/User')

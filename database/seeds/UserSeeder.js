@@ -15,12 +15,17 @@ const Factory = use('Factory')
 
 class UserSeeder {
 	async run () {
-		let user = new User()
-		user.username = 'captaincrypto'
-		user.email = 'kylan.hurt@gmail.com'
-		user.password = 'Test123456'
-		user.edge_username = 'captaincrypto'
-		user = await user.save()
+		// create anonymous user
+		let user1 = new User()
+		user1 = await user1.save()
+
+		// create definite user
+		let user2 = new User()
+		user2.username = 'captaincrypto'
+		user2.email = 'kylan.hurt@gmail.com'
+		user2.password = 'Test123456'
+		user2.edge_username = 'captaincrypto'
+		user2 = await user2.save()
 		await Factory.model('App/Models/User').createMany(100)
 	}
 }
