@@ -53,7 +53,7 @@ let user_id = 1
 let video_id = 1
 Factory.blueprint('App/Models/View', async (faker) => {
 	let last_position = Math.floor(Math.random() * 20)
-	let count = 3
+	let count = Math.floor(Math.random() * 4)
 	if (user_id === 1) {
 		count = Math.floor(Math.random() * 70)
 	}

@@ -15,9 +15,9 @@ const View = use('App/Models/View')
 const Factory = use('Factory')
 
 class ViewSeeder {
-  async run () {
-    await Factory.model('App/Models/View').createMany(1000)
-  }
+	async run () {
+		await Factory.model('App/Models/View').createMany(10000)
+	}
 }
 
 module.exports = ViewSeeder

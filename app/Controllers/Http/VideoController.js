@@ -37,10 +37,22 @@ class VideoController {
 	async getRecommended ({ params, request, response, view }) {
 		const { quantity } = params
 		const limit = quantity ? quantity : 20
-		const videos = await Database.table('videos')
+		const videos = await Database
+			.select([
+				'videos.title',
+				'videos.description',
+				'videos.rand',
+				'videos.source',
+				'videos.created_at',
+				'users.username'
+			])
+			.from('videos')
+			.sum('views.count AS count')
 			.innerJoin('users', 'users.id', '=', 'videos.user_id')
 			.innerJoin('views', 'views.video_id', '=', 'videos.id')
-			.limit(limit).orderBy('created_at', 'desc')
+			.groupBy('videos.id')
+			.limit(limit)
+			.orderBy('videos.created_at', 'desc')
 		return {
 			videos
 		}

@@ -5,7 +5,7 @@ const Model = use('Model')
 
 class View extends Model {
 	static get hidden () {
-		return ['id']
+		return ['id', 'user_id', 'video_id']
 	}
 
 	user () {
