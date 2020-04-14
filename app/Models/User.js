@@ -38,6 +38,10 @@ class User extends Model {
 	tokens () {
 		return this.hasMany('App/Models/Token')
 	}
+
+	models () {
+		return this.hasMany('App/Models/View')
+	}
 }
 
 module.exports = User

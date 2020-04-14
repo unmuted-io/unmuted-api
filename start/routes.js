@@ -20,7 +20,8 @@ Route.get('/', () => {
 	return { greeting: 'Hello world in JSON' }
 })
 
-// Route.resource('videos', 'VideoController')
+
+Route.put('videos/view', 'VideoController.updateViewCount')
 Route.put('/videos/:id', 'VideoController.update').middleware('auth')
 Route.delete('/videos/id', 'VideoController.destroy').middleware('auth')
 Route.post('/videos', 'VideoController.store').middleware('auth')

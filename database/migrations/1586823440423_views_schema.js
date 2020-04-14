@@ -7,9 +7,9 @@ class ViewsSchema extends Schema {
 	up () {
 		this.create('views', (table) => {
 			table.integer('video_id').unsigned().references('id').inTable('videos')
-      table.integer('user_id').unsigned().references('id').inTable('users')
-      table.integer('last_position').unsigned()
-			table.integer('count').unsigned()
+			table.integer('user_id').unsigned().references('id').inTable('users')
+			table.integer('last_position').unsigned()
+			table.integer('count').unsigned().defaultTo(1)
 			table.increments()
 			table.timestamps()
 		})

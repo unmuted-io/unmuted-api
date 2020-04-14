@@ -12,6 +12,10 @@ class Video extends Model {
 	user () {
 		return this.belongsTo('App/Models/User')
 	}
+
+	view () {
+		return this.hasMany('App/Models/View')
+	}
 }
 
 module.exports = Video

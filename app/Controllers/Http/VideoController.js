@@ -1,8 +1,6 @@
 'use strict'
 const crypto = require('crypto')
 const base32 = require('hi-base32')
-var ffmpeg = require('fluent-ffmpeg')
-var command = ffmpeg()
 
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
 /** @typedef {import('@adonisjs/framework/src/Response')} Response */
@@ -17,6 +15,7 @@ var command = ffmpeg()
 // set namespace
 const Video = use('App/Models/Video')
 const Database = use('Database')
+const View = use('App/Models/View')
 
 class VideoController {
 	/**
@@ -162,6 +161,23 @@ class VideoController {
    * @param {Response} ctx.response
    */
 	async destroy ({ params, request, response }) {
+	}
+
+	async updateViewCount ({ request, response }) {
+		const body = request.post()
+		const {
+			sourceRand,
+			lastPosition,
+			username
+		} = body
+		const user = await Database.table('users').where('username', username)
+		const video = await Database.table('videos').where('rand', sourceRand)
+		const view = new View()
+		view.video_id = video.id
+		view.last_position = lastPosition
+		view.user_id = user.id
+		await view.save()
+		return response.status(200).send()
 	}
 }
 

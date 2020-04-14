@@ -54,6 +54,7 @@ class AuthController {
   getUserByParam = async ({ request, auth, response }) => {
   	const { field, value } = request.params
   	const user = await User.findBy(field, value)
+  	if (!user) return response.status(204).send()
   	const accessToken = await auth.generate(user)
   	return response.json({ user, access_token: accessToken })
   }
