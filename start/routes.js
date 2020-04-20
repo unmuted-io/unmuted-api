@@ -30,9 +30,12 @@ Route.get('/videos/rec/:quantity?', 'VideoController.getRecommended')
 Route.get('/videos/:id', 'VideoController.show')
 Route.get('/videos/processed/:id', 'VideoController.show') // may need to be changed later
 
-
+// users and auth
 Route.post('/auth/register', 'AuthController.register')
 Route.post('/auth/login', 'AuthController.login')
 Route.get('/auth/check-username/:username', 'AuthController.checkUsername')
 Route.get('/user/:field/:value', 'AuthController.getUserByParam')
 Route.put('/auth/username', 'AuthController.updateUsername')
+
+// video ratings
+Route.post('/video-rating', 'VideoRatingController.store')

@@ -140,7 +140,21 @@ class VideoController {
    */
 	async show ({ params }) {
 		const { id } = params
-		const video = await Database.table('videos').where('rand', id)
+		const video = await Database
+			.select([
+				'videos.title',
+				'videos.description',
+				'videos.rand',
+				'videos.source',
+				'videos.created_at',
+				'users.username'
+			])
+			.from('videos')
+			.where('rand', id)
+			.sum('views.count AS count')
+			.innerJoin('users', 'users.id', '=', 'videos.user_id')
+			.innerJoin('views', 'views.video_id', '=', 'videos.id')
+			.groupBy('videos.id')
 		return video
 	}
 

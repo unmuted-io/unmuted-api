@@ -5,7 +5,7 @@
   "description": "Adonisjs boilerplate for API server with pre-configured JWT",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon --watch app --watch config --watch database --watch public --watch start --watch bootstrap --watch config --watch .env server.js",
+    "start": "nodemon --no-lazy --inspect --watch app --watch config --watch database --watch public --watch start --watch bootstrap --watch config --watch .env server.js",
     "debug": "adonis serve --dev --debug",
     "nodemon": "nodemon server.js",
     "test": "node ace test",
