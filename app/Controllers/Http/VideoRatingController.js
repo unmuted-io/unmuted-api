@@ -100,6 +100,26 @@ class VideoRatingController {
 		return response.send(result)
 	}
 
+	async getVideoRatingStats({ params, request, response, view }) {
+		const { uuid } = params
+		const video = await Video.find({
+			rand: uuid
+		})
+		const stats = await Database
+			.select('direction')
+			.count('direction as count')
+			.from('video_ratings')
+			.groupBy('direction')
+			.where('video_id', video.id)
+		const valuesMap = {}
+		console.log('stats: ', stats)
+		stats.forEach(row => {
+			console.log('row: ', row)
+			valuesMap[row.direction] = row.count
+		})
+		return response.send(valuesMap)
+	}
+
 	/**
    * Render a form to update an existing videorating.
    * GET videoratings/:id/edit
