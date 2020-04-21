@@ -66,6 +66,7 @@ class VideoRatingController {
 			direction
 		})
 		result.direction = direction
+		result.save()
 		return response.send(result)
 	}
 
@@ -79,6 +80,24 @@ class VideoRatingController {
    * @param {View} ctx.view
    */
 	async show ({ params, request, response, view }) {
+
+	}
+
+	async showUserRating({ params, request, response, view }) {
+		const { uuid, username } = params
+		console.log('params: ', params)
+		const user = await User.find({
+			username
+		})
+		const video = await Video.find({
+			rand: uuid
+		})
+
+		const result = await VideoRating.findBy({
+			user_id: user.id,
+			video_id: video.id
+		})
+		return response.send(result)
 	}
 
 	/**

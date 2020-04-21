@@ -155,7 +155,7 @@ class VideoController {
 			.innerJoin('users', 'users.id', '=', 'videos.user_id')
 			.innerJoin('views', 'views.video_id', '=', 'videos.id')
 			.groupBy('videos.id')
-		return video
+		return video[0]
 	}
 
 	/**

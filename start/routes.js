@@ -39,3 +39,4 @@ Route.put('/auth/username', 'AuthController.updateUsername')
 
 // video ratings
 Route.post('/video-rating', 'VideoRatingController.store')
+Route.get('/video-rating/:uuid/user/:username', 'VideoRatingController.showUserRating')
