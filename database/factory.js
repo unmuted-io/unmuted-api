@@ -31,19 +31,19 @@ Factory.blueprint('App/Models/User', async (faker) => {
 })
 
 Factory.blueprint('App/Models/Video', async (faker) => {
-	let rand = await crypto.randomBytes(8)
+	// let rand = await crypto.randomBytes(8)
 	// make a random string
-	rand = base32.encode(rand).replace(/===/i, '')
+	// rand = base32.encode(rand).replace(/===/i, '')
 
-	const time = (new Date()).getTime()
+	// const time = (new Date()).getTime()
 	// set the source filename
-	const source = `${time}-${rand}.mp4`
+	// const source = `${time}-${rand}.mp4`
 	return {
 		title: faker.sentence(),
 		description: faker.paragraph(),
 		processed: 1,
-		source,
-		rand,
+		source: '1578534374949-K37ZNFRO56CHI.mp4',
+		rand: 'K37ZNFRO56CHI',
 		user_id: Math.floor(Math.random() * 90) + 1
 
 	}

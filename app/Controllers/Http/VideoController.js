@@ -35,24 +35,48 @@ class VideoController {
 	}
 
 	async getRecommended ({ params, request, response, view }) {
-		const { quantity } = params
+		const { quantity, username } = params
+		const userRows = await Database.table('users').where('username', username)
+		const user = userRows[0]
 		const limit = quantity ? quantity : 20
-		const videos = await Database
-			.select([
-				'videos.title',
-				'videos.description',
-				'videos.rand',
-				'videos.source',
-				'videos.created_at',
-				'users.username'
-			])
-			.from('videos')
-			.sum('views.count AS count')
-			.innerJoin('users', 'users.id', '=', 'videos.user_id')
-			.innerJoin('views', 'views.video_id', '=', 'videos.id')
-			.groupBy('videos.id')
-			.limit(limit)
-			.orderBy('videos.created_at', 'desc')
+		let videos
+		if (user) {
+			videos = await Database
+				.select([
+					'videos.title',
+					'videos.description',
+					'videos.rand',
+					'videos.source',
+					'videos.created_at',
+					'users.username'
+				])
+				.from('videos')
+				.sum('views.count AS count')
+				.innerJoin('users', 'users.id', '=', 'videos.user_id')
+				.innerJoin('views', 'views.video_id', '=', 'videos.id')
+				.where('views.user_id', '!=', user.id)
+				.groupBy('videos.id')
+				.limit(limit)
+				.orderBy('videos.created_at', 'desc')
+		} else {
+			videos = await Database
+				.select([
+					'videos.title',
+					'videos.description',
+					'videos.rand',
+					'videos.source',
+					'videos.created_at',
+					'users.username'
+				])
+				.from('videos')
+				.sum('views.count AS count')
+				.innerJoin('users', 'users.id', '=', 'videos.user_id')
+				.innerJoin('views', 'views.video_id', '=', 'videos.id')
+				.groupBy('videos.id')
+				.limit(limit)
+				.orderBy('videos.created_at', 'desc')
+		}
+
 		return {
 			videos
 		}
@@ -199,14 +223,25 @@ class VideoController {
 			lastPosition,
 			username
 		} = body
-		const user = await Database.table('users').where('username', username)
-		const video = await Database.table('videos').where('rand', sourceRand)
-		const view = new View()
-		view.video_id = video.id
-		view.last_position = lastPosition
-		view.user_id = user.id
-		await view.save()
-		return response.status(200).send()
+		if (!sourceRand || !lastPosition) {
+			return response.status(400).send()
+		}
+		const userRows = await Database.table('users').where('username', username)
+		const user = userRows[0]
+		const videoRows = await Database.table('videos').where('rand', sourceRand)
+		const video = videoRows[0]
+		// need to increase the view count for a user by 1
+		const result = await View.findOrCreate({
+			user_id: user.id,
+			video_id: video.id
+		}, {
+			user_id: user.id || 1,
+			video_id: video.id	,
+			last_position: lastPosition
+		})
+		result.last_position = lastPosition
+		result.save()
+		return response.send(result)
 	}
 }
 
