@@ -16,7 +16,7 @@ const Factory = use('Factory')
 
 class ViewSeeder {
 	async run () {
-		await Factory.model('App/Models/View').createMany(10000)
+		await Factory.model('App/Models/View').createMany(1500)
 	}
 }
 

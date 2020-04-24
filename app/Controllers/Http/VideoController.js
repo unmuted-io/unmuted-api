@@ -226,22 +226,50 @@ class VideoController {
 		if (!sourceRand || !lastPosition) {
 			return response.status(400).send()
 		}
-		const userRows = await Database.table('users').where('username', username)
-		const user = userRows[0]
+		let user
+		if (username) {
+			const userRows = await Database.table('users').where('username', username)
+			user = userRows[0]
+		}
+
 		const videoRows = await Database.table('videos').where('rand', sourceRand)
 		const video = videoRows[0]
-		// need to increase the view count for a user by 1
-		const result = await View.findOrCreate({
-			user_id: user.id,
+
+		let viewResult = await View.findBy({
+			user_id: username ? user.id : 1,
 			video_id: video.id
-		}, {
-			user_id: user.id || 1,
-			video_id: video.id	,
-			last_position: lastPosition
 		})
-		result.last_position = lastPosition
-		result.save()
-		return response.send(result)
+
+		// if the view already exists
+		const view = viewResult
+		let newViewCount
+		// if there is already a view
+		if (view) {
+			// and user is logged in
+			if (user) {
+				// increase by one up to max of 4
+				newViewCount = view.count < 4 ? view.count++ : 4
+			} else {
+				// if not logged in then just increase it
+				newViewCount = view.count++
+			}
+
+			// and save
+			await View.query()
+				.where('user_id', username ? user.id : 1)
+				.andWhere('video_id', video.id)
+				.update({
+					count: newViewCount
+				})
+		} else {
+			// if doesn't already exist
+			const newView = new View()
+			newView.video_id = video.id
+			newView.user_id = user ? user.id : 1,
+			newView.last_position = user ? lastPosition : 0,
+			await newView.save()
+		}
+		return response.send()
 	}
 }
 

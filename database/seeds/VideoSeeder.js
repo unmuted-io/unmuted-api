@@ -1,4 +1,6 @@
 'use strict'
+const fs = require('fs')
+const faker = require('faker')
 
 /*
 |--------------------------------------------------------------------------
@@ -11,20 +13,26 @@
 */
 
 /** @type {import('@adonisjs/lucid/src/Factory')} */
-const Factory = use('Factory')
+// const Factory = use('Factory')
 const Video = use('App/Models/Video')
+
+const fileList = fs.readdirSync('./public/videos')
 
 class VideoSeeder {
 	async run () {
-		let video = new Video()
-		video.title = 'My random video title'
-		video.description = 'This is my random video description'
-		video.source = '1586844193553-ZUBZGTYF6LQPS.mp4'
-		video.rand = 'ZUBZGTYF6LQPS'
-		video.user_id = 1
-		video.processed = 1
-		video = await video.save()
-		await Factory.model('App/Models/Video').createMany(100)
+		fileList.forEach(async file => {
+			if (!file.includes('.mp4')) return
+			const filenameParts = file.split('-')
+			const rand = filenameParts[1]
+			let video = new Video()
+			video.title = faker.lorem.sentence(),
+			video.description = faker.lorem.paragraph(),
+			video.processed = 1,
+			video.source = file,
+			video.rand = rand.replace('.mp4', ''),
+			video.user_id = Math.floor(Math.random() * 90) + 1
+			await video.save()
+		})
 	}
 }
 
