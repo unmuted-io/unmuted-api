@@ -215,6 +215,7 @@ class VideoController {
 	 */
 	async destroy({ params, request, response }) {}
 
+	// for maxed viewCount update updated_at
 	async updateViewCount({ request, response }) {
 		const body = request.post()
 		const { sourceRand, lastPosition, username } = body
@@ -268,6 +269,24 @@ class VideoController {
 
 		const newCount = newViewCount || 1
 		return response.send(newCount)
+	}
+
+	async getRecentlyViewed({ params, response }) {
+		const { quantity, username } = params
+		if (!username) return response.status(401).send()
+		const decodedUsername = decodeURI(username)
+		const userRows = await Database.table('users').where('username', decodedUsername)
+		const user = userRows[0]
+		const limit = quantity ? quantity : 20
+		const videos = await Database
+			.table('views')
+			.select()
+			.where('views.user_id', user.id)
+			.innerJoin('videos', 'videos.id', '=', 'views.video_id')
+			.innerJoin('users', 'users.id', '=', 'videos.user_id')
+			.limit(limit)
+			.orderBy('views.updated_at', 'DESC')
+		return response.send(videos)
 	}
 }
 

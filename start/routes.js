@@ -29,6 +29,7 @@ Route.get('/videos', 'VideoController.index')
 Route.get('/videos/rec/:quantity?/:username?', 'VideoController.getRecommended')
 Route.get('/videos/:id', 'VideoController.show')
 Route.get('/videos/processed/:id', 'VideoController.show') // may need to be changed later
+Route.get('/videos/recently-viewed/:username/:quantity?', 'VideoController.getRecentlyViewed')
 
 // users and auth
 Route.post('/auth/register', 'AuthController.register')
