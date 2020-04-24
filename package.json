@@ -7,7 +7,8 @@
   "scripts": {
     "start": "nodemon --no-lazy --inspect --watch app --watch config --watch database --watch public --watch start --watch bootstrap --watch config --watch .env server.js",
     "debug": "adonis serve --dev --debug",
-    "nodemon": "nodemon server.js",
+    "dev": "adonis serve --dev --debug",
+    "nodemon": "nodemon --inspect-brk=9229 server.js",
     "test": "node ace test",
     "test:debug": "node --nolazy --inspect-brk=9229 ace test"
   },
@@ -36,6 +37,7 @@
     "@typescript-eslint/eslint-plugin": "^2.26.0",
     "@typescript-eslint/parser": "^2.27.0",
     "crypto": "^1.0.1",
+    "faker": "^4.1.0",
     "ffmpeg": "^0.0.4",
     "fluent-ffmpeg": "^2.1.2",
     "handbrake-js": "^5.0.0",
