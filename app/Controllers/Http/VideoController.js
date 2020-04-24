@@ -230,17 +230,18 @@ class VideoController {
 		})
 
 		// if the view already exists
-		const view = viewResult
 		let newViewCount
+		let newView
+		const view = viewResult
 		// if there is already a view
 		if (view) {
 			// and user is logged in
 			if (user) {
 				// increase by one up to max of 4
-				newViewCount = view.count < 4 ? view.count++ : 4
+				newViewCount = view.count < 4 ? ++view.count : 4
 			} else {
 				// if not logged in then just increase it
-				newViewCount = view.count++
+				newViewCount = ++view.count
 			}
 
 			// and save
@@ -252,13 +253,15 @@ class VideoController {
 				})
 		} else {
 			// if doesn't already exist
-			const newView = new View()
+			newView = new View()
 			newView.video_id = video.id
 			newView.user_id = user ? user.id : 1
 			newView.last_position = user ? lastPosition : 0
 			await newView.save()
 		}
-		return response.send()
+
+		const newCount = newViewCount || 1
+		return response.send(newCount)
 	}
 }
 
