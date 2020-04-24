@@ -3,7 +3,7 @@
 const User = use('App/Models/User')
 
 class AuthController {
-	register = async ({ request, auth, response }) => {
+	async register ({ request, auth, response }) {
 		const username = request.input('username')
 		const email = request.input('email')
 		const password = request.input('password')
@@ -28,7 +28,7 @@ class AuthController {
 		return response.json({ user: user, access_token: accessToken })
 	}
 
-	login = async ({ request, auth, response }) => {
+	async login ({ request, auth, response }) {
 		const email = request.input('email')
 		const password = request.input('password')
 		try {
@@ -43,14 +43,14 @@ class AuthController {
 		}
 	}
 
-	checkUsername = async ({ request, auth, response }) => {
+	async checkUsername ({ request, auth, response }) {
 		const { username } = request.params
 		const result = await User.findBy('username', username)
 		const isAvailable = result ? false : true
 		return response.json({ isAvailable })
 	}
 
-	getUserByParam = async ({ request, auth, response }) => {
+	async getUserByParam ({ request, auth, response }) {
 		const { field, value } = request.params
 		const user = await User.findBy(field, value)
 		if (!user) return response.status(204).send()
@@ -58,7 +58,7 @@ class AuthController {
 		return response.json({ user, access_token: accessToken })
 	}
 
-	updateUsername = async ({ request, auth, response }) => {
+	async updateUsername ({ request, auth, response }) {
 		const body = request.post()
 		const { email, username, edge_username } = body
 		let key
