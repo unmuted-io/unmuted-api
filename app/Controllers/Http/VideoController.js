@@ -53,6 +53,7 @@ class VideoController {
 				'videos.rand',
 				'videos.source',
 				'videos.created_at',
+				'videos.duration',
 				'users.username'
 			])
 				.from('videos')
@@ -70,6 +71,7 @@ class VideoController {
 				'videos.rand',
 				'videos.source',
 				'videos.created_at',
+				'videos.duration',
 				'users.username',
 			])
 				.from('videos')
@@ -278,14 +280,29 @@ class VideoController {
 		const userRows = await Database.table('users').where('username', decodedUsername)
 		const user = userRows[0]
 		const limit = quantity ? quantity : 20
-		const videos = await Database
-			.table('views')
-			.select()
-			.where('views.user_id', user.id)
-			.innerJoin('videos', 'videos.id', '=', 'views.video_id')
+		const watchedVideosSubquery = Database
+			.from('views')
+			.where('user_id', user.id)
+			.select('video_id')
+		const videos = await Database.select([
+			'videos.title',
+			'videos.description',
+			'videos.rand',
+			'videos.source',
+			'videos.created_at',
+			'videos.duration',
+			'users.username',
+			'views.updated_at',
+			'views.last_position'
+		])
+			.from('videos')
+			.sum('views.count AS count')
 			.innerJoin('users', 'users.id', '=', 'videos.user_id')
+			.innerJoin('views', 'views.video_id', '=', 'videos.id')
+			.whereIn('videos.id', watchedVideosSubquery)
+			.groupBy('videos.id')
 			.limit(limit)
-			.orderBy('views.updated_at', 'DESC')
+			.orderBy('views.updated_at', 'desc')
 		return response.send(videos)
 	}
 }

@@ -11,6 +11,7 @@ class VideosSchema extends Schema {
 			table.string('source')
 			table.string('rand')
 			table.integer('user_id').unsigned().references('id').inTable('users')
+			table.integer('duration').unsigned().notNullable().defaultTo(0)
 			table.boolean('processed').defaultTo(false)
 			table.increments()
 			table.timestamps()
