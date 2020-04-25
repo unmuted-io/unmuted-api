@@ -276,8 +276,8 @@ class VideoController {
 	// for maxed viewCount update updated_at
 	async updateViewCount({ request, response }) {
 		const body = request.post()
-		const { sourceRand, lastPosition, username } = body
-		if (!sourceRand || !lastPosition) {
+		const { rand, lastPosition, username } = body
+		if (!rand || !lastPosition) {
 			return response.status(400).send()
 		}
 		let user
@@ -286,7 +286,7 @@ class VideoController {
 			user = userRows[0]
 		}
 
-		const videoRows = await Database.table('videos').where('rand', sourceRand)
+		const videoRows = await Database.table('videos').where('rand', rand)
 		const video = videoRows[0]
 
 		let viewResult = await View.findBy({
