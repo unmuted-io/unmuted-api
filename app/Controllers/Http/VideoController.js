@@ -205,10 +205,10 @@ class VideoController {
 
 			})
 			.screenshots({
-				count: 10,
+				count: 8,
 				folder: 'public/videos/processed/thumbnails',
 				size: '360x240',
-				filename: '%b-%0i.png'
+				filename: '%b-%i.png'
 			})
 			.save(`public/videos/processed/${source}`)
 		response.send(rand)
