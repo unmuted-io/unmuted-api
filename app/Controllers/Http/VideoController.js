@@ -1,6 +1,8 @@
 'use strict'
 const crypto = require('crypto')
 const base32 = require('hi-base32')
+const ffmpeg = require('fluent-ffmpeg')
+const WebSocket = require('ws')
 
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
 /** @typedef {import('@adonisjs/framework/src/Response')} Response */
@@ -18,6 +20,20 @@ const Database = use('Database')
 const View = use('App/Models/View')
 
 class VideoController {
+	constructor () {
+		this.ws = new WebSocket('ws://localhost:9824')
+		this.ws.on('open',  () => {
+			console.log('controller connected')
+		})
+
+		this.ws.on('close', function close() {
+			console.log('controllere disconnected')
+		})
+
+		this.ws.on('message', (data) => {
+			console.log(`controller received messgae: ${data}`)
+		})
+	}
 	/**
 	 * Show a list of all videos.
 	 * GET videos
@@ -107,7 +123,7 @@ class VideoController {
 	 * @param {Request} ctx.request
 	 * @param {Response} ctx.response
 	 */
-	async store({ request, response }) {
+	async store ({ request, response }) {
 		const file = request.file('file')
 
 		let rand = await crypto.randomBytes(8)
@@ -131,31 +147,59 @@ class VideoController {
 			})
 		}
 		// create the entry in the database
-		const video = await Video.create({
-			...request.all(),
-			source,
-			rand,
-		})
+
+		let video
 
 		// process the movie file
-		await ffmpeg(`public/videos/${source}`)
+		ffmpeg(`public/videos/${source}`, {
+			logger: 'debug',
+			stdoutLines: 1000
+		})
 			.videoCodec('libx264')
 			.fps(29.7)
 			.size('720x480')
-			.on('error', function (err) {
-				console.log('An error occurred: ' + err.message)
+			.autopad() // creates columns to pad dimensions (if necessary)
+			// can set multiple .output('${somefile}.mp4)
+			.audioBitrate('128k')
+			.audioChannels(2)
+			.audioCodec('libmp3lame')
+			.on('start', (commandLine) => {
+				console.log(`Spawned Ffmpeg with command: ${commandLine}`)
 			})
-			.on('end', function () {
-				console.log('Processing finished !')
-				response.send({
+			.on('codecData', function(data) {
+				console.log(`Input is ${data.audio}  audio with  ${data.video} video`)
+			})
+			.on('progress', (progress) => {
+				console.log('progress is: ', progress)
+				console.log(`Processing: ${progress.percent}% done`)
+				this.ws.send(progress.percent)
+			})
+			.on('error', function (err) {
+				console.log(`An error occurred:  ${err.message}`)
+				response.status(500).send()
+			})
+			.on('end', async function () {
+				ffmpeg.ffprobe(`public/videos/processed/${source}`, (err, metadata) => {
+					console.log('metadata: ', metadata)
+				})
+				video = await Video.create({
+					...request.all(),
+					source,
 					rand,
 				})
+				console.log('Processing finished !')
+				this.ws.send(100)
+				response.status().send({
+					video,
+				})
+			})
+			.screenshots({
+				count: 10,
+				folder: 'public/videos/processed/thumbnails',
+				size: '360x240',
+				filename: '%b-%0i.png'
 			})
 			.save(`public/videos/processed/${source}`)
-
-		response.send({
-			rand,
-		})
 	}
 
 	/**
