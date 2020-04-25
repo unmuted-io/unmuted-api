@@ -6,11 +6,12 @@ const Schema = use('Schema')
 class VideosSchema extends Schema {
 	up () {
 		this.create('videos', (table) => {
-			table.string('title')
+			table.string('title').notNullable()
 			table.string('description', 5000)
-			table.string('source')
-			table.string('rand')
-			table.integer('user_id').unsigned().references('id').inTable('users')
+			table.string('source').unique().notNullable()
+			table.string('rand').unique().notNullable()
+			table.unique(['source', 'rand'])
+			table.integer('user_id').unsigned().references('id').inTable('users').notNullable()
 			table.integer('duration').unsigned().notNullable().defaultTo(0)
 			table.boolean('processed').defaultTo(false)
 			table.increments()

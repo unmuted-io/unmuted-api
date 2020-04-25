@@ -105,17 +105,6 @@ class VideoController {
 	}
 
 	/**
-	 * Render a form to be used for creating a new video.
-	 * GET videos/create
-	 *
-	 * @param {object} ctx
-	 * @param {Request} ctx.request
-	 * @param {Response} ctx.response
-	 * @param {View} ctx.view
-	 */
-	async create({ request, response, view }) {}
-
-	/**
 	 * Create/save a new video.
 	 * POST videos
 	 *
@@ -124,8 +113,10 @@ class VideoController {
 	 * @param {Response} ctx.response
 	 */
 	async store ({ request, response }) {
+		const { description, title, username } = request.body
 		const file = request.file('file')
-
+		const userRows = await Database.table('users').where('username', username)
+		const user = userRows[0]
 		let rand = await crypto.randomBytes(8)
 		// make a random string
 		rand = base32.encode(rand).replace(/===/i, '')
@@ -171,10 +162,10 @@ class VideoController {
 			})
 			.on('progress', (newProgress) => {
 				const progressNumber = parseFloat(newProgress.percent)
-				if (progressNumber > progress) {
+				if (progressNumber > progress && progressNumber < 80) {
 					console.log('progress is: ', progressNumber)
 					progress = progressNumber
-					this.ws.send(progressNumber.percentNumber)
+					this.ws.send(progressNumber)
 				}
 			})
 			.on('error', (err) => {
@@ -182,19 +173,36 @@ class VideoController {
 				response.status(500).send()
 			})
 			.on('end', async () => {
-				ffmpeg.ffprobe(`public/videos/processed/${source}`, (err, metadata) => {
+				this.ws.send(85)
+				ffmpeg.ffprobe(`public/videos/processed/${source}`, async (err, metadata) => {
 					console.log('metadata: ', metadata)
+					this.ws.send(90)
+					// should check to make sure not duplicate
+					video = await Video.create({
+						source,
+						rand,
+						duration: Math.floor(metadata.format.duration),
+						user_id: user.id,
+						description,
+						title,
+						processed: 1
+					})
+					this.ws.send(95)
+					// create a default user 1 view entry or some joins will break
+					const newView = new View()
+					newView.video_id = video.id
+					newView.user_id = 1
+					newView.last_position = 0
+					await newView.save()
+					this.ws.send(100)
+					this.ws.send('complete: ', + rand)
+					response.status(200).send({
+						video,
+					})
 				})
-				video = await Video.create({
-					...request.all(),
-					source,
-					rand,
-				})
+
 				console.log('Processing finished !')
-				this.ws.send('complete: ', + rand)
-				response.status().send({
-					video,
-				})
+
 			})
 			.screenshots({
 				count: 10,
@@ -203,6 +211,7 @@ class VideoController {
 				filename: '%b-%0i.png'
 			})
 			.save(`public/videos/processed/${source}`)
+		response.send(rand)
 	}
 
 	/**

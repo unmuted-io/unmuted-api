@@ -7,7 +7,7 @@ const wss = new WebSocket.Server({
 wss.on('connection', function connection(ws) {
 	console.log('wss connected')
 	ws.on('message', function incoming(message) {
-		console.log('received: ', message)
+		console.log('received: %s', message)
 		wss.clients.forEach(client => {
 			if (client.readyState === WebSocket.OPEN) {
 				if (message.includes('complete: ')) {
