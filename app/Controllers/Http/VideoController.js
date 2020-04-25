@@ -149,7 +149,7 @@ class VideoController {
 		// create the entry in the database
 
 		let video
-
+		let progress = 0
 		// process the movie file
 		ffmpeg(`public/videos/${source}`, {
 			logger: 'debug',
@@ -166,19 +166,22 @@ class VideoController {
 			.on('start', (commandLine) => {
 				console.log(`Spawned Ffmpeg with command: ${commandLine}`)
 			})
-			.on('codecData', function(data) {
+			.on('codecData', (data) => {
 				console.log(`Input is ${data.audio}  audio with  ${data.video} video`)
 			})
-			.on('progress', (progress) => {
-				console.log('progress is: ', progress)
-				console.log(`Processing: ${progress.percent}% done`)
-				this.ws.send(progress.percent)
+			.on('progress', (newProgress) => {
+				const progressNumber = parseFloat(newProgress.percent)
+				if (progressNumber > progress) {
+					console.log('progress is: ', progressNumber)
+					progress = progressNumber
+					this.ws.send(progressNumber.percentNumber)
+				}
 			})
-			.on('error', function (err) {
+			.on('error', (err) => {
 				console.log(`An error occurred:  ${err.message}`)
 				response.status(500).send()
 			})
-			.on('end', async function () {
+			.on('end', async () => {
 				ffmpeg.ffprobe(`public/videos/processed/${source}`, (err, metadata) => {
 					console.log('metadata: ', metadata)
 				})
@@ -188,7 +191,7 @@ class VideoController {
 					rand,
 				})
 				console.log('Processing finished !')
-				this.ws.send(100)
+				this.ws.send('complete: ', + rand)
 				response.status().send({
 					video,
 				})
