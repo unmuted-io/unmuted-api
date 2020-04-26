@@ -12,7 +12,11 @@
 | http://adonisjs.com/docs/4.1/routing
 |
 */
-
+console.log('in routes file')
+const VideoChatController = require('../app/Controllers/Http/VideoController')
+console.log('video chat controller imported')
+const chat = new VideoChatController()
+console.log('chat is: ', chat)
 /** @type {typeof import('@adonisjs/framework/src/Route/Manager')} */
 const Route = use('Route')
 

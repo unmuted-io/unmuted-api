@@ -2,6 +2,7 @@
 const crypto = require('crypto')
 const base32 = require('hi-base32')
 const ffmpeg = require('fluent-ffmpeg')
+const io = require('../../../ws')
 const WebSocket = require('ws')
 
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
@@ -19,8 +20,11 @@ const Video = use('App/Models/Video')
 const Database = use('Database')
 const View = use('App/Models/View')
 
+const rooms = []
+
 class VideoController {
 	constructor () {
+		console.log('in VideoController constructor')
 		this.ws = new WebSocket('ws://localhost:9824')
 		this.ws.on('open',  () => {
 			console.log('controller connected')
@@ -200,9 +204,37 @@ class VideoController {
 						video,
 					})
 				})
-
 				console.log('Processing finished !')
-
+				// create chat room now?
+				// const room = io
+				// 	.of(`/${rand}`)
+				// 	.on('connection', (socket) => {
+				// 		console.log('connected socket: ', socket)
+				// 		this.rooms.push(rand)
+				// 		socket.emit('message', `Hello and welcome to the video room: ${rand}`)
+				// 		socket.on('userMessage', (data) => {
+				// 			console.log('a userMessage has come in, data', data)
+				// 			room.emit('message', {
+				// 				content: `${data.content}`,
+				// 				username: data.username,
+				// 				amount: 0,
+				// 				timestamp: Date.now(),
+				// 			})
+				// 		})
+				// 		// when someone joins room
+				// 		socket.on('joinRoom', (room) => {
+				// 			// send message user?
+				// 			if (this.rooms.includes(room)) {
+				// 				socket.join(room)
+				// 				socket.emit(
+				// 					'success',
+				// 					'You have successfully joined room: ' + rand
+				// 				)
+				// 			} else {
+				// 				socket.emit('err', 'Error, no room: ' + rand)
+				// 			}
+				// 		})
+				// 	})
 			})
 			.screenshots({
 				count: 8,

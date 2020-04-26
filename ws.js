@@ -1,5 +1,18 @@
-const WebSocket = require('ws')
+const app = require('http').createServer()
+const io = require('socket.io')(app)
 
+const WebSocket = require('ws')
+const port = 9825
+
+// for socket.io
+app.listen(port, () => console.log('Server listening on port:', port))
+io.on('connection', function (socket) {
+	console.log('user connected1')
+	socket.emit('welcome', 'welcome man2')
+	io.emit('welcome', 'welcome man3')
+})
+
+// raw websockets, currently for video processing progress
 const wss = new WebSocket.Server({
 	port: 9824
 })
@@ -21,3 +34,5 @@ wss.on('connection', function connection(ws) {
 
 	ws.send('websocket started')
 })
+
+module.exports = io
