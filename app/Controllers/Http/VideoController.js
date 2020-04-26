@@ -4,6 +4,9 @@ const base32 = require('hi-base32')
 const ffmpeg = require('fluent-ffmpeg')
 const io = require('../../../ws')
 const WebSocket = require('ws')
+const VideoChatController = require('./VideoChatController')
+const VideoChat = new VideoChatController()
+
 
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
 /** @typedef {import('@adonisjs/framework/src/Response')} Response */
@@ -240,7 +243,13 @@ class VideoController {
 				count: 8,
 				folder: 'public/videos/processed/thumbnails',
 				size: '360x240',
-				filename: '%b-%i.png'
+				filename: '%b-360x240-%i.png'
+			})
+			.screenshots({
+				count: 1,
+				folder: 'public/videos/processed/thumbnails',
+				size: '720x480',
+				filename: '%b-720x480-%i.png'
 			})
 			.save(`public/videos/processed/${source}`)
 		response.send(rand)
