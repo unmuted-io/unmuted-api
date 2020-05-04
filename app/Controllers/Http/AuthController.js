@@ -4,10 +4,8 @@ const User = use('App/Models/User')
 
 class AuthController {
 	async register ({ request, auth, response }) {
-		const username = request.input('username')
-		const email = request.input('email')
-		const password = request.input('password')
-		const edge_username = request.input('edge_username')
+		const body = request.post()
+		const { username, email, password, edge_username } = body
 		let user = new User()
 		user.username = username
 		user.email = email
