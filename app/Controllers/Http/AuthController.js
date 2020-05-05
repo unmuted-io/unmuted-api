@@ -107,8 +107,15 @@ class AuthController {
 		return response.status(200).send({ type, source })
 	}
 
-	async saveProfileImage ({ request, response }) {
-		const { type, file: base64Image } = request.body
+	async saveProfileImage ({ request, response, auth }) {
+		let user
+		try {
+			user = await auth.getUser()
+		} catch (error) {
+			response.send('Missing or invalid jwt token')
+		}
+		const { type } = request.body
+		const file = request.file('file')
 		const requirements = {
 			profile: {
 				maxHeight: 400,
@@ -116,7 +123,7 @@ class AuthController {
 			},
 			cover: {
 				maxHeight: 400,
-				maxWidth: 1600
+				maxWidth: 1200
 			}
 		}
 		let rand = await crypto.randomBytes(8)
@@ -126,18 +133,19 @@ class AuthController {
 		const time = new Date().getTime()
 		// set the source filename
 		const source = `${time}-${rand}.jpg`
-		const strippedBase64 = base64Image
-			.replace('data:image/jpg;base64', '')
-			.replace('data:image/jpeg;base64', '')
-		const buff = Buffer.from(strippedBase64, 'base64')
-		const img = await Jimp.read(buff)
+
+		const img = await Jimp.read(file.tmpPath)
 		const { maxHeight, maxWidth } = requirements[type]
+		const path = `/images/profile/${type}/${source}`
 		img.scaleToFit(maxWidth, maxHeight)
 			// .background('#FFFFFF') // only needed for PNG
 			.quality(85)
-			.write(`public/images/profile/${type}/${source}`)
-
-		return response.status(200).send({ type, source })
+			.write(`public/${path}`)
+		const settings = JSON.parse(user.settings) || {}
+		settings[`${type}ImageUrl`] = path
+		user.settings = JSON.stringify(settings)
+		await user.save()
+		return response.status(200).send({ settings: user.settings })
 	}
 }
 
