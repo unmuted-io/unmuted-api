@@ -53,17 +53,6 @@
       "program": "${workspaceFolder}/server.js"
     },
     {
-      "name": "Attach",
-      "type": "node",
-      "request": "attach",
-      "port": 9229,
-      "address": "localhost",
-      "restart": true,
-      "sourceMaps": false,
-      "localRoot": "${workspaceRoot}",
-      "remoteRoot": null
-    },
-    {
       "type": "node",
       "request": "launch",
       "name": "Debug Application",
