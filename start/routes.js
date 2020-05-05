@@ -34,8 +34,9 @@ Route.get('/videos/recently-viewed/:username/:quantity?', 'VideoController.getRe
 Route.post('/auth/register', 'AuthController.register')
 Route.post('/auth/login', 'AuthController.login')
 Route.get('/auth/check-username/:username', 'AuthController.checkUsername')
-Route.get('/user/:field/:value', 'AuthController.getUserByParam')
 Route.put('/auth/username', 'AuthController.updateUsername')
+Route.get('/user/:field/:value', 'AuthController.getUserByParam')
+Route.post('/user/image/:type', 'AuthController.updateProfileImage').middleware('auth')
 
 // video ratings
 Route.post('/video-rating', 'VideoRatingController.store')

@@ -1,6 +1,8 @@
 'use strict'
-
+const crypto = require('crypto')
+const base32 = require('hi-base32')
 const User = use('App/Models/User')
+const Jimp = require('jimp')
 
 class AuthController {
 	async register ({ request, auth, response }) {
@@ -72,6 +74,37 @@ class AuthController {
 		user.username = username
 		await user.save()
 		return response.json({ username: user.username })
+	}
+
+	async updateProfileImage ({ request, params, response }) {
+		const { type } = params
+		const requirements = {
+			profile: {
+				maxHeight: 1600,
+				maxWidth: 1600
+			},
+			cover: {
+				maxHeight: 1600,
+				maxWidth: 4800
+			}
+		}
+		const file = request.file('file')
+		let rand = await crypto.randomBytes(8)
+		// make a random string
+		rand = base32.encode(rand).replace(/===/i, '')
+
+		const time = new Date().getTime()
+		// set the source filename
+		const source = `${time}-${rand}.jpg`
+
+		const img = await Jimp.read(file.tmpPath)
+		const { maxHeight, maxWidth } = requirements[type]
+		img.scaleToFit(maxWidth, maxHeight)
+			// .background('#FFFFFF') // only needed for PNG
+			.quality(85)
+			.write(`public/images/profile/${type}/${source}`)
+
+		return response.status(200).send({ type, source })
 	}
 }
 
