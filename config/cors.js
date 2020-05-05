@@ -18,7 +18,6 @@ module.exports = {
   */
 	origin: (currentOrigin) => {
     const match = (currentOrigin === 'http://localhost:3000') || 'http://localhost:3333'
-    console.log('match: ', match)
     return match
 	},
 

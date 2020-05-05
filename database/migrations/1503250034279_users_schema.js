@@ -10,6 +10,7 @@ class UserSchema extends Schema {
 			table.string('username', 80).unique().nullable()
 			table.string('email', 254).unique().nullable()
 			table.string('edge_username', 254).unique().nullable()
+			table.json('settings')
 			table.string('password', 60).nullable()
 			table.timestamps()
 		})

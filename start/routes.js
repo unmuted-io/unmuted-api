@@ -36,6 +36,7 @@ Route.post('/auth/login', 'AuthController.login')
 Route.get('/auth/check-username/:username', 'AuthController.checkUsername')
 Route.put('/auth/username', 'AuthController.updateUsername')
 Route.get('/user/:field/:value', 'AuthController.getUserByParam')
+Route.post('/user/image/save', 'AuthController.saveProfileImage').middleware('auth')
 Route.post('/user/image/:type', 'AuthController.updateProfileImage').middleware('auth')
 
 // video ratings

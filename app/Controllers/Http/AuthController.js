@@ -106,6 +106,39 @@ class AuthController {
 
 		return response.status(200).send({ type, source })
 	}
+
+	async saveProfileImage ({ request, response }) {
+		const { type, file: base64Image } = request.body
+		const requirements = {
+			profile: {
+				maxHeight: 400,
+				maxWidth: 400
+			},
+			cover: {
+				maxHeight: 400,
+				maxWidth: 1600
+			}
+		}
+		let rand = await crypto.randomBytes(8)
+		// make a random string
+		rand = base32.encode(rand).replace(/===/i, '')
+
+		const time = new Date().getTime()
+		// set the source filename
+		const source = `${time}-${rand}.jpg`
+		const strippedBase64 = base64Image
+			.replace('data:image/jpg;base64', '')
+			.replace('data:image/jpeg;base64', '')
+		const buff = Buffer.from(strippedBase64, 'base64')
+		const img = await Jimp.read(buff)
+		const { maxHeight, maxWidth } = requirements[type]
+		img.scaleToFit(maxWidth, maxHeight)
+			// .background('#FFFFFF') // only needed for PNG
+			.quality(85)
+			.write(`public/images/profile/${type}/${source}`)
+
+		return response.status(200).send({ type, source })
+	}
 }
 
 module.exports = AuthController
