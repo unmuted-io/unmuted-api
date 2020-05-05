@@ -16,7 +16,11 @@ module.exports = {
   | Function - Receives the current origin and should return one of the above values.
   |
   */
-	origin: true,
+	origin: (currentOrigin) => {
+    const match = (currentOrigin === 'http://localhost:3000') || 'http://localhost:3333'
+    console.log('match: ', match)
+    return match
+	},
 
 	/*
   |--------------------------------------------------------------------------
