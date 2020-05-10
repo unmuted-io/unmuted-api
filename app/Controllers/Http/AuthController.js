@@ -3,6 +3,7 @@ const crypto = require('crypto')
 const base32 = require('hi-base32')
 const User = use('App/Models/User')
 const Jimp = require('jimp')
+var jwtDecode = require('jwt-decode')
 
 class AuthController {
 	async register ({ request, auth, response }) {
@@ -29,17 +30,28 @@ class AuthController {
 	}
 
 	async login ({ request, auth, response }) {
-		const email = request.input('email')
-		const password = request.input('password')
 		try {
-			if (await auth.withRefreshToken().attempt(email, password)) {
-				let user = await User.findBy('email', email)
-				let accessToken = await auth.generate(user)
-				const output = { user: user, access_token: accessToken }
+			const authHeader = request.header('Authorization')
+			let user
+			if (authHeader) {
+				const decodedToken = jwtDecode(authHeader.replace('Bearer ', ''))
+				user = await User.find(decodedToken.uid)
+				const tokens = await auth.withRefreshToken().generate(user)
+				const output = { user, access_token: tokens}
 				return response.json(output)
+			} else {
+				const email = request.input('email')
+				const password = request.input('password')
+				const tokens = await auth.withRefreshToken().attempt(email, password)
+				if (tokens) {
+					let user = await User.findBy('email', email)
+					const output = { user, access_token: tokens }
+					return response.json(output)
+				}
 			}
-		} catch (e) {
-			return response.json({ message: 'You first need to register!' })
+		} catch (error) {
+			console.log('Login error: ', error)
+			return response.status(400).send({ message: 'Unable to log in. Please check credentials and try again.' })
 		}
 	}
 
@@ -56,6 +68,15 @@ class AuthController {
 		if (!user) return response.status(204).send()
 		const accessToken = await auth.generate(user)
 		return response.json({ user, access_token: accessToken })
+	}
+
+	async saveSettings ({ request, auth, response }) {
+		const body = request.post()
+		const user = await auth.getUser()
+		const stringifiedSettings = JSON.stringify(body)
+		user.settings = stringifiedSettings
+		await user.save()
+		return response.send({ settings: stringifiedSettings })
 	}
 
 	async updateUsername ({ request, auth, response }) {
