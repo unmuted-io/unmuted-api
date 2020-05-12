@@ -1,0 +1,14 @@
+ffmpeg \
+-ss 1 \
+-i src/aaaa.mp4 \
+-y \
+-filter_complex scale=w='if(gt(a,1.5),360,trunc(240*a/2)*2)':h='if(lt(a,1.5),240,trunc(360/a/2)*2)'[size0];[size0]pad=w=360:h=240:x='if(gt(a,1.5),0,(360-iw)/2)':y='if(lt(a,1.5),0,(240-ih)/2)':color=black[out] \
+-b:a 128k \
+-ac 2 \
+-acodec libmp3lame \
+-vcodec libx264 \
+-r 30000/1001 output/videos/aaaa.mp4 \
+-map [out] \
+-r 1 \
+-vframes 8 \
+-start_number 1 output/images/aaaa-360x240-%d.png

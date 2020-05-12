@@ -23,21 +23,25 @@ Route.get('/', () => {
 Route.put('videos/view', 'VideoController.updateViewCount')
 Route.put('/videos/:id', 'VideoController.update').middleware('auth')
 Route.delete('/videos/id', 'VideoController.destroy').middleware('auth')
-Route.post('/videos', 'VideoController.store').middleware('auth')
 Route.get('/videos', 'VideoController.index')
 Route.get('/videos/rec/:quantity?/:username?', 'VideoController.getRecommended')
 Route.get('/videos/:id', 'VideoController.show')
 Route.get('/videos/processed/:id', 'VideoController.show') // may need to be changed later
 Route.get('/videos/recently-viewed/:username/:quantity?', 'VideoController.getRecentlyViewed')
 
+// multimedia processing
+Route.post('/videos', 'MediaController.store').middleware('auth')
+
 // users and auth
 Route.post('/auth/register', 'AuthController.register')
 Route.post('/auth/login', 'AuthController.login')
 Route.get('/auth/check-username/:username', 'AuthController.checkUsername')
 Route.put('/auth/username', 'AuthController.updateUsername')
-Route.get('/user/:field/:value', 'AuthController.getUserByParam')
+Route.put('/user/settings', 'AuthController.saveSettings').middleware('auth')
 Route.post('/user/image/save', 'AuthController.saveProfileImage').middleware('auth')
 Route.post('/user/image/:type', 'AuthController.updateProfileImage').middleware('auth')
+Route.get('/user/:field/:value', 'AuthController.getUserByParam')
+Route.get('/channel/:channel', 'AuthController.getChannel')
 
 // video ratings
 Route.post('/video-rating', 'VideoRatingController.store')
