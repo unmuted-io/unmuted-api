@@ -3,15 +3,14 @@ const crypto = require('crypto')
 const base32 = require('hi-base32')
 const ffmpeg = require('fluent-ffmpeg')
 const WebSocket = require('ws')
+const VideoChatController = require('./VideoChatController')
+const VideoChat = new VideoChatController() // instantiates websockets
 const { spawn } = require('child_process')
-const fs = require('fs')
 
 // set namespace
 const Video = use('App/Models/Video')
 const Database = use('Database')
 const View = use('App/Models/View')
-
-let instances = 0
 
 class MediaController {
 	constructor() {
@@ -55,7 +54,8 @@ class MediaController {
 
 		const time = new Date().getTime()
 		// set the source filename
-		const source = `${time}-${rand}.mp4`
+		const sourceAndRand = `${time}-${rand}`
+		const source = `${sourceAndRand}.mp4`
 		// move the file from temp to public folder
 		await file.move('public/videos', {
 			name: source,
@@ -76,7 +76,7 @@ class MediaController {
 		// handle duplicates
 		ffmpeg.ffprobe(`public/videos/${source}`, async (error, metadata) => {
 			if (error) console.error('ffprobe error: ', error)
-			console.log('input metatdata: ', metadata)
+			// console.log('input metatdata: ', metadata)
 			const { format } = metadata
 			const { duration } = format
 
@@ -113,7 +113,7 @@ class MediaController {
 				'8',
 				'-start_number',
 				'1',
-				`public/images/videos/thumbnails/${source}-360x240-%d.png`
+				`public/images/videos/thumbnails/${sourceAndRand}-360x240-%d.png`
 			]
 			const ffmpeg = spawn('ffmpeg', cleanedFfmpegCommandArray)
 
@@ -129,16 +129,72 @@ class MediaController {
 					const dataArray = stringifiedData.replace(/ +(?= )/g,'').split(' ')
 					// console.log('frames: ', dataArray[1])
 					const frames = dataArray[1]
-					progress = frames / totalFrames
+					progress = (frames / totalFrames) * 100
 					console.log('progress: ', progress)
+					if (progress < 100) {
+						this.ws.send(progress * 0.8)
+					}
 				}
 			})
-			ffmpeg.on('close', (code) => {
+			ffmpeg.on('close', async (code) => {
 				console.log(`child process exited with code ${code}`)
-			})
-		})
+				if (code !== 0) {
+					console.log('error: ', code)
+					return response.status(500).send()
+				}
+				this.ws.send(85)
 
-		response.send(rand)
+				const ffprobe1 = spawn('ffprobe', [
+					'-print_format',
+					'json',
+					'-show_streams',
+					`public/videos/processed/${source}`]
+				)
+
+				ffprobe1.stdout.on('data', async (data) => {
+					const stringifiedData = data.toString()
+
+					console.log(`stdout: ${stringifiedData}`)
+					const ouput = JSON.parse(stringifiedData)
+					const { streams } = ouput
+					const h264 = streams.find(stream => stream.codec_name === 'h264')
+					if (!h264) return response.status(500).send()
+					const { duration } = h264
+					this.ws.send(90)
+					// should check to make sure not duplicate
+					video = await Video.create({
+						source,
+						rand,
+						duration: Math.floor(duration),
+						user_id: user.id,
+						description,
+						title,
+						processed: 1
+					})
+					this.ws.send(95)
+					// create a default user 1 view entry or some joins will break
+					const newView = new View()
+					newView.video_id = video.id
+					newView.user_id = 1
+					newView.last_position = 0
+					await newView.save()
+					this.ws.send(100)
+					this.ws.send('complete: ', + rand)
+					response.status(200).send({
+						video,
+					})
+				})
+
+				ffprobe1.stderr.on('data', (data) => {
+					console.error(`stderr: ${data.toString()}`)
+				})
+
+				ffprobe1.on('close', (code) => {
+					console.log(`child process exited with code ${code}`)
+				})
+			})
+			response.send(rand)
+		})
 	}
 }
 
