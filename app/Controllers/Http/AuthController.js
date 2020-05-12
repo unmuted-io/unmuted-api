@@ -70,13 +70,24 @@ class AuthController {
 		return response.json({ user, access_token: accessToken })
 	}
 
-	async saveSettings ({ request, auth, response }) {
+	async saveProfile ({ request, auth, response }) {
 		const body = request.post()
 		const user = await auth.getUser()
-		const stringifiedSettings = JSON.stringify(body)
-		user.settings = stringifiedSettings
+		const stringifiedProfile = JSON.stringify(body)
+		user.profile = stringifiedProfile
 		await user.save()
-		return response.send({ settings: stringifiedSettings })
+		return response.send({ profile: stringifiedProfile })
+	}
+
+	async getChannel ({ request, params, response }) {
+		const { channel } = params
+		console.log('params: ', params)
+		const channelResults = await User.findBy({
+			username: channel
+		})
+		// if adding more fields, may return string instead of JSON?
+		const { profile } = channelResults
+		return response.send(profile)
 	}
 
 	async updateUsername ({ request, auth, response }) {
@@ -162,11 +173,11 @@ class AuthController {
 			// .background('#FFFFFF') // only needed for PNG
 			.quality(85)
 			.write(`public/${path}`)
-		const settings = JSON.parse(user.settings) || {}
-		settings[`${type}ImageUrl`] = path
-		user.settings = JSON.stringify(settings)
+		const profile = JSON.parse(user.profile) || {}
+		profile[`${type}ImageUrl`] = path
+		user.profile = JSON.stringify(profile)
 		await user.save()
-		return response.status(200).send({ settings: user.settings })
+		return response.status(200).send({ profile: user.profile })
 	}
 }
 
