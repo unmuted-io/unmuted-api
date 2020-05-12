@@ -1,3 +1,5 @@
+/* global use */
+
 'use strict'
 
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */

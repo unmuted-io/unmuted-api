@@ -1,3 +1,5 @@
+/* global use */
+
 'use strict'
 
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
@@ -26,14 +28,14 @@ class VideoController {
 	 * @param {Response} ctx.response
 	 * @param {View} ctx.view
 	 */
-	async index({ request, response, view }) {
+	async index() {
 		const videos = await Video.all()
 		return {
 			videos,
 		}
 	}
 
-	async getRecommended({ params, request, response, view }) {
+	async getRecommended({ params }) {
 		const { quantity, username } = params
 		const decodedUsername = decodeURI(username)
 		const userRows = await Database.table('users').where('username', decodedUsername)
@@ -127,7 +129,7 @@ class VideoController {
 	 * @param {Response} ctx.response
 	 * @param {View} ctx.view
 	 */
-	async edit({ params, request, response, view }) {}
+	async edit() {}
 
 	/**
 	 * Update video details.
@@ -137,7 +139,7 @@ class VideoController {
 	 * @param {Request} ctx.request
 	 * @param {Response} ctx.response
 	 */
-	async update({ params, request, response }) {}
+	async update() {}
 
 	/**
 	 * Delete a video with id.
@@ -147,7 +149,7 @@ class VideoController {
 	 * @param {Request} ctx.request
 	 * @param {Response} ctx.response
 	 */
-	async destroy({ params, request, response }) {}
+	async destroy() {}
 
 	// for maxed viewCount update updated_at
 	async updateViewCount({ request, response }) {

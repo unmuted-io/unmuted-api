@@ -1,3 +1,5 @@
+/* global use */
+
 'use strict'
 const crypto = require('crypto')
 const base32 = require('hi-base32')

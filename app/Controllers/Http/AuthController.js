@@ -1,3 +1,5 @@
+/* global use */
+
 'use strict'
 const crypto = require('crypto')
 const base32 = require('hi-base32')
@@ -55,7 +57,7 @@ class AuthController {
 		}
 	}
 
-	async checkUsername ({ request, auth, response }) {
+	async checkUsername ({ request, response }) {
 		const { username } = request.params
 		const result = await User.findBy('username', username)
 		const isAvailable = result ? false : true
@@ -79,7 +81,7 @@ class AuthController {
 		return response.send({ profile: stringifiedProfile })
 	}
 
-	async getChannel ({ request, params, response }) {
+	async getChannel ({ params, response }) {
 		const { channel } = params
 		console.log('params: ', params)
 		const channelResults = await User.findBy({
@@ -90,7 +92,7 @@ class AuthController {
 		return response.send(profile)
 	}
 
-	async updateUsername ({ request, auth, response }) {
+	async updateUsername ({ request, response }) {
 		const body = request.post()
 		const { email, username, edge_username } = body
 		let key

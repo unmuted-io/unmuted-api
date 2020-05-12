@@ -1,3 +1,5 @@
+/* global use */
+
 'use strict'
 const Database = use('Database')
 const io = require('../../../ws')
