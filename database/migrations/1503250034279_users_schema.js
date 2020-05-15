@@ -1,3 +1,5 @@
+/* global use */
+
 'use strict'
 
 /** @type {import('@adonisjs/lucid/src/Schema')} */

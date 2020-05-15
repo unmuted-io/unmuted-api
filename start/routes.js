@@ -1,3 +1,5 @@
+/* global use */
+
 'use strict'
 
 /*
@@ -37,13 +39,16 @@ Route.post('/auth/register', 'AuthController.register')
 Route.post('/auth/login', 'AuthController.login')
 Route.get('/auth/check-username/:username', 'AuthController.checkUsername')
 Route.put('/auth/username', 'AuthController.updateUsername')
-Route.put('/user/settings', 'AuthController.saveSettings').middleware('auth')
+Route.put('/user/profile', 'AuthController.saveProfile').middleware('auth')
 Route.post('/user/image/save', 'AuthController.saveProfileImage').middleware('auth')
 Route.post('/user/image/:type', 'AuthController.updateProfileImage').middleware('auth')
 Route.get('/user/:field/:value', 'AuthController.getUserByParam')
-Route.get('/channel/:channel', 'AuthController.getChannel')
+Route.get('/channel/:channel/:id?', 'AuthController.getChannel')
 
 // video ratings
 Route.post('/video-rating', 'VideoRatingController.store')
 Route.get('/video-rating/:uuid/user/:username', 'VideoRatingController.showUserRating')
 Route.get('/video-rating/:uuid', 'VideoRatingController.getVideoRatingStats')
+
+// user channel subscriptions
+Route.get('/subscription/:user/:channel', 'UserChannelSubscriptionController.getUserChannelSubscription')

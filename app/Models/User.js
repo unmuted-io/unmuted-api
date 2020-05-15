@@ -1,3 +1,5 @@
+/* global use */
+
 'use strict'
 
 /** @type {typeof import('@adonisjs/lucid/src/Lucid/Model')} */
@@ -22,7 +24,7 @@ class User extends Model {
 	}
 
 	static get hidden () {
-		return ['id', 'password']
+		return ['password']
 	}
 
 	/**

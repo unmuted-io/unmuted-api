@@ -6,6 +6,7 @@ const base32 = require('hi-base32')
 const User = use('App/Models/User')
 const Jimp = require('jimp')
 var jwtDecode = require('jwt-decode')
+const Database = use('Database')
 
 class AuthController {
 	async register ({ request, auth, response }) {
@@ -82,14 +83,33 @@ class AuthController {
 	}
 
 	async getChannel ({ params, response }) {
-		const { channel } = params
-		console.log('params: ', params)
+		const { channel, id } = params
 		const channelResults = await User.findBy({
 			username: channel
 		})
+		if (!channelResults) return response.status(500).send()
+		console.log('channelResults: ', channelResults)
+		const subscriptionResults = await Database
+			.table('users')
+			.innerJoin(
+				'user_channel_subscriptions',
+				'user_channel_subscriptions.channel_id',
+				'=',
+				'users.id'
+			)
+			.where('user_channel_subscriptions.user_id', '=',  parseInt(id) || null)
+			.andWhere('user_channel_subscriptions.channel_id', '=', parseInt(channelResults.id))
+		console.log('subscriptionResults: ', subscriptionResults)
 		// if adding more fields, may return string instead of JSON?
 		const { profile } = channelResults
-		return response.send(profile)
+		const profileObj = profile ? JSON.parse(profile) : {}
+		const { profileImageUrl = '', coverImageUrl = '' } = profileObj
+		const output = {
+			profileImageUrl,
+			coverImageUrl,
+			isSubscribed: subscriptionResults[0] ? true : false
+		}
+		return response.send(output)
 	}
 
 	async updateUsername ({ request, response }) {
