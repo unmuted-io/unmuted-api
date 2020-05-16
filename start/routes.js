@@ -52,3 +52,8 @@ Route.get('/video-rating/:uuid', 'VideoRatingController.getVideoRatingStats')
 
 // user channel subscriptions
 Route.post('/subscription/:userId/:channel', 'UserChannelSubscriptionController.saveUserChannelSubscription')
+
+
+// OAUTH endpoints
+Route.get('login/facebook', 'OauthController.facebookRedirect')
+Route.get('facebook/callback', 'OauthController.facebookCallback')
