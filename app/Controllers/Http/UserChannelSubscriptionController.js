@@ -1,4 +1,9 @@
+/* global use */
 'use strict'
+
+const UserChannelSubscription = use('App/Models/UserChannelSubscription')
+const User = use('App/Models/User')
+const Database = use('Database')
 
 /** @typedef {import('@adonisjs/framework/src/Request')} Request */
 /** @typedef {import('@adonisjs/framework/src/Response')} Response */
@@ -38,7 +43,26 @@ class UserChannelSubscriptionController {
 	 * @param {Request} ctx.request
 	 * @param {Response} ctx.response
 	 */
-	async store({ request, response }) {}
+	async saveUserChannelSubscription({ request, response, params }) {
+		const { isSubscribed } = request.body
+		const { userId, channel: channelUsername } = params
+		if ((typeof isSubscribed === 'undefined') || !userId || !channelUsername) return response.status(400).send()
+		const channel = await User.findBy({ username: channelUsername })
+		let subscription = await UserChannelSubscription.findBy({
+			channel_id: channel.id,
+			user_id: parseInt(userId)
+		})
+		if (subscription) {
+			subscription.isSubscribed = isSubscribed
+		} else {
+			subscription = new UserChannelSubscription()
+			subscription.channel_id = channel.id
+			subscription.user_id = parseInt(userId)
+			subscription.is_subscribed = isSubscribed
+		}
+		await subscription.save()
+		return response.send(subscription)
+	}
 
 	/**
 	 * Display a single userchannelsubscription.
@@ -73,7 +97,9 @@ class UserChannelSubscriptionController {
 	 * @param {Request} ctx.request
 	 * @param {Response} ctx.response
 	 */
-	async update({ params, request, response }) {}
+	async update({ params, request, response }) {
+
+	}
 
 	/**
 	 * Delete a userchannelsubscription with id.

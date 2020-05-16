@@ -51,4 +51,4 @@ Route.get('/video-rating/:uuid/user/:username', 'VideoRatingController.showUserR
 Route.get('/video-rating/:uuid', 'VideoRatingController.getVideoRatingStats')
 
 // user channel subscriptions
-Route.get('/subscription/:user/:channel', 'UserChannelSubscriptionController.getUserChannelSubscription')
+Route.post('/subscription/:userId/:channel', 'UserChannelSubscriptionController.saveUserChannelSubscription')

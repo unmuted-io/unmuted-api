@@ -11,6 +11,7 @@ class UserChannelSubscriptionsSchema extends Schema {
 			table.integer('user_id').unsigned().references('id').inTable('users')
 			table.integer('channel_id').unsigned().references('id').inTable('users')
 			table.unique(['user_id', 'channel_id'])
+			table.boolean('is_subscribed').defaultsTo(false)
 			table.increments()
 			table.timestamps()
 		})
