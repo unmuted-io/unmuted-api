@@ -112,9 +112,9 @@ class MediaController {
 				'-r',
 				`${thumbnailRate}`,
 				'-vframes',
-				'8',
+				'16',
 				'-start_number',
-				'1',
+				'0.25',
 				`public/images/videos/thumbnails/${sourceAndRand}-360x240-%d.png`
 			]
 			const ffmpeg = spawn('ffmpeg', cleanedFfmpegCommandArray)
