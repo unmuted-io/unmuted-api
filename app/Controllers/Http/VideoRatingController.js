@@ -111,7 +111,10 @@ class VideoRatingController {
 			.from('video_ratings')
 			.groupBy('direction')
 			.where('video_id', video.id)
-		const valuesMap = {}
+		const valuesMap = {
+			'-1': 0,
+			'1': 0
+		}
 		console.log('stats: ', stats)
 		stats.forEach((row) => {
 			console.log('row: ', row)
