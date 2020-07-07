@@ -115,7 +115,14 @@ class MediaController {
 				'16',
 				'-start_number',
 				'0.25',
-				`public/images/videos/thumbnails/${sourceAndRand}-360x240-%d.png`
+				`public/images/videos/thumbnails/${sourceAndRand}-360x240-%d.png`,
+				'-f',
+				'hls',
+				'-hls_time',
+				'10',
+				'-hls_playlist_type',
+				'event',
+				'stream/stream.m3u8'
 			]
 			const ffmpeg = spawn('ffmpeg', cleanedFfmpegCommandArray)
 
