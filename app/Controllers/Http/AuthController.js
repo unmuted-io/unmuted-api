@@ -83,12 +83,11 @@ class AuthController {
 	}
 
 	async getChannel ({ params, response }) {
-		const { channel, id } = params
+		const { channel } = params
 		const channelResults = await User.findBy({
 			username: channel
 		})
 		if (!channelResults) return response.status(500).send()
-		console.log('channelResults: ', channelResults)
 		const subscriptionResults = await Database
 			.table('users')
 			.innerJoin(
@@ -97,17 +96,17 @@ class AuthController {
 				'=',
 				'users.id'
 			)
-			.where('user_channel_subscriptions.user_id', '=',  parseInt(id) || null)
 			.andWhere('user_channel_subscriptions.channel_id', '=', parseInt(channelResults.id))
 		console.log('subscriptionResults: ', subscriptionResults)
 		// if adding more fields, may return string instead of JSON?
-		const { profile } = channelResults
+		const { profile, id } = channelResults
 		const profileObj = profile ? JSON.parse(profile) : {}
 		const { profileImageUrl = '', coverImageUrl = '' } = profileObj
 		const output = {
 			profileImageUrl,
 			coverImageUrl,
-			isSubscribed: subscriptionResults[0] ? true : false
+			isSubscribed: subscriptionResults[0] ? true : false,
+			id
 		}
 		return response.send(output)
 	}

@@ -239,6 +239,17 @@ class VideoController {
 			.orderBy('views.updated_at', 'desc')
 		return response.send(videos)
 	}
+
+	async getLatestChannelVideos({ params, response }) {
+		const { channelId } = params
+		let limit = params.limit || 20
+		const latestChannelVideos = await Database.table('videos')
+			.join('users', 'videos.user_id', '=', 'users.id')
+			.where('users.id', '=', channelId)
+			.limit(limit)
+			.orderBy('videos.created_at', 'DESC')
+		return response.status(200).send(latestChannelVideos)
+	}
 }
 
 module.exports = VideoController
