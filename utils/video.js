@@ -1,3 +1,5 @@
+const { DSTOR_API_URL } = process.env
+
 const getFfmpegCommand = (
 	source,
 	thumbnailRate,
@@ -34,13 +36,34 @@ const getFfmpegCommand = (
 		'-f',
 		'hls',
 		'-hls_time',
-		'10',
+		'5',
 		'-hls_playlist_type',
 		'event',
 		`public/videos/processed/stream/${sourceAndRand}/stream.m3u8`,
 	]
 }
 
+const getCustomStreamTemplate = (hash) => {
+	return `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:14
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:EVENT
+${DSTOR_API_URL}/ipfs/${hash}
+#EXT-X-ENDLIST
+`
+}
+
+const replaceM3u8Links = (input, hashes) => {
+	let newString = input
+	for (let i = 0; i < Object.keys(hashes).length; i++) {
+		newString = newString.replace(`stream${i}.ts\n`, `${DSTOR_API_URL}/ipfs/${hashes[i]}\n`)
+	}
+	return newString
+}
+
 module.exports = {
-	getFfmpegCommand
+	getFfmpegCommand,
+	getCustomStreamTemplate,
+	replaceM3u8Links
 }

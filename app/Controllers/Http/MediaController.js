@@ -11,7 +11,7 @@ const axios = require('axios')
 const VideoChatController = require('./VideoChatController')
 const VideoChat = new VideoChatController() // instantiates websockets
 const { spawn } = require('child_process')
-const { getFfmpegCommand } = require('../../../utils/video')
+const { getFfmpegCommand, getCustomStreamTemplate, replaceM3u8Links } = require('../../../utils/video')
 
 // set namespace
 const Video = use('App/Models/Video')
@@ -96,15 +96,55 @@ class MediaController {
 			if (!fs.existsSync(`public/videos/processed/stream/${sourceAndRand}/`)){
 				fs.mkdirSync(`public/videos/processed/stream/${sourceAndRand}/`)
 			}
+			let streamIterator = 0
+			const path = `public/videos/processed/stream/${sourceAndRand}`
+			const hashes = {}
 			const cleanedFfmpegCommandArray = getFfmpegCommand(source, thumbnailRate, sourceAndRand)
 			const ffmpeg = spawn('ffmpeg', cleanedFfmpegCommandArray)
 
 			ffmpeg.stdout.on('data', (data) => {
 				console.log(`stdout: ${data}`)
 			})
-			ffmpeg.stderr.on('data', (data) => {
-				console.log(`error: ${data}`)
+			ffmpeg.stderr.on('data', async (data) => {
+				console.log(`data: ${data}`)
 				const stringifiedData = data.toString()
+				const segmentSearchString = `Opening '${path}/stream${streamIterator + 1}.ts' for writing`
+
+				if (stringifiedData.search(segmentSearchString) > -1) {
+					console.log(`On streamIterator: ${streamIterator}`)
+					const fileStream = fs.readFileSync(`${path}/stream${streamIterator}.ts`)
+					const formData = new FormData()
+					const formHeaders = formData.getHeaders()
+					const boundaryKey = Math.random().toString(16)
+					formData.append('file', fileStream, source)
+					const dstorAddResponse = await axios({
+						url: `${DSTOR_API_URL}/api/v0/add`,
+						method: 'post',
+						headers: {
+							...formHeaders,
+							Authorization: `Bearer ${DSTOR_ACCESS_TOKEN}`,
+							'Content-Type': `multipart/form-data; boundary="${boundaryKey}"`
+						},
+						data: formData,
+						maxContentLength: Infinity,
+						maxBodyLength: Infinity
+					})
+					if (dstorAddResponse.statusText === 'OK') {
+						const { Hash } = dstorAddResponse.data
+						if (fs.existsSync(`${path}/customStream.m3u8`)) {
+							const file = fs.readFileSync(`${path}/stream.m3u8`, { encoding: 'utf8'})
+							const newString = replaceM3u8Links(file, hashes)
+							fs.writeFileSync(`${path}/customStream.m3u8`, newString)
+						} else {
+							const template = getCustomStreamTemplate(Hash)
+							fs.writeFileSync(`${path}/customStream.m3u8`, template)
+						}
+						hashes[streamIterator] = Hash
+						console.log('Hash is: ', Hash)
+						// console.log('streamIterator: ', streamIterator, ' Hashs is: ', Hash, ' and hashes: ', hashes)
+						streamIterator++
+					}
+				}
 				// console.error(`stderr: ${stringifiedData}`)
 				const stringFirstPart = stringifiedData.substring(0,6)
 				// console.log('stringFirstPart: ', stringFirstPart)
@@ -125,7 +165,13 @@ class MediaController {
 					console.log('error: ', code)
 					return response.status(500).send()
 				}
-				this.ws.send(85)
+				this.ws.send(82)
+
+				const file = fs.readFileSync(`${path}/stream.m3u8`, { encoding: 'utf8'})
+				const newString = replaceM3u8Links(file, hashes)
+				fs.writeFileSync(`${path}/customStream.m3u8`, newString)
+
+				this.ws.send(87)
 
 				const ffprobe1 = spawn('ffprobe', [
 					'-print_format',
@@ -146,7 +192,7 @@ class MediaController {
 					this.ws.send(90)
 					// should check to make sure not duplicate
 
-					const fileStream = fs.readFileSync(`public/videos/processed/${source}`)
+					const fileStream = fs.readFileSync(`public/videos/processed/stream/${sourceAndRand}/customStream.m3u8`)
 					const formData = new FormData()
 					const formHeaders = formData.getHeaders()
 					const boundaryKey = Math.random().toString(16)
