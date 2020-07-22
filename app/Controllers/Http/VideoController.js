@@ -107,9 +107,10 @@ class VideoController {
 			'videos.description',
 			'videos.rand',
 			'videos.source',
+			'videos.hash',
 			'videos.created_at',
 			'users.username',
-			'users.profile'
+			'users.profile',
 		])
 			.from('videos')
 			.where('rand', id)

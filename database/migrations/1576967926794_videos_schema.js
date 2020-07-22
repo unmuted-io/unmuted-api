@@ -10,6 +10,7 @@ class VideosSchema extends Schema {
 			table.string('description', 5000)
 			table.string('source').unique().notNullable()
 			table.string('rand').unique().notNullable()
+			table.string('hash').unique()
 			table.unique(['source', 'rand'])
 			table.integer('user_id').unsigned().references('id').inTable('users').notNullable()
 			table.integer('duration').unsigned().notNullable().defaultTo(0)

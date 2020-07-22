@@ -4,10 +4,14 @@
 const crypto = require('crypto')
 const base32 = require('hi-base32')
 const ffmpeg = require('fluent-ffmpeg')
+const FormData = require('form-data')
+const fs = require('fs')
 const WebSocket = require('ws')
+const axios = require('axios')
 const VideoChatController = require('./VideoChatController')
 const VideoChat = new VideoChatController() // instantiates websockets
 const { spawn } = require('child_process')
+const { getFfmpegCommand } = require('../../../utils/video')
 
 // set namespace
 const Video = use('App/Models/Video')
@@ -31,7 +35,7 @@ class MediaController {
 		})
 
 		this.ws.on('message', (data) => {
-			console.log(`controller received messgae: ${data}`)
+			// console.log(`controller received messgae: ${data}`)
 		})
 	}
 
@@ -46,6 +50,7 @@ class MediaController {
 
 	async store({ request, response }) {
 		console.log('inside store')
+		const { DSTOR_ACCESS_TOKEN, DSTOR_API_URL } = process.env
 		const { description, title, username } = request.body
 		const file = request.file('file')
 		const userRows = await Database.table('users').where('username', username)
@@ -88,48 +93,17 @@ class MediaController {
 			}
 			const totalFrames = duration * 30 // approximation
 			// console.log('about to create ffmpeg')
-			const cleanedFfmpegCommandArray = [
-				'-ss',
-				'1',
-				'-i',
-				`public/videos/${source}`,
-				'-y',
-				'-filter_complex',
-				"scale=w='if(gt(a,1.5),360,trunc(240*a/2)*2)':h='if(lt(a,1.5),240,trunc(360/a/2)*2)'[size0];[size0]pad=w=360:h=240:x='if(gt(a,1.5),0,(360-iw)/2)':y='if(lt(a,1.5),0,(240-ih)/2)':color=black[out]",
-				'-b:a',
-				'128k',
-				'-ac',
-				'2',
-				'-acodec',
-				'libmp3lame',
-				'-vcodec',
-				'libx264',
-				'-r',
-				'30000/1001',
-				`public/videos/processed/${source}`,
-				'-map',
-				'[out]',
-				'-r',
-				`${thumbnailRate}`,
-				'-vframes',
-				'16',
-				'-start_number',
-				'0.25',
-				`public/images/videos/thumbnails/${sourceAndRand}-360x240-%d.png`,
-				'-f',
-				'hls',
-				'-hls_time',
-				'10',
-				'-hls_playlist_type',
-				'event',
-				'stream/stream.m3u8'
-			]
+			if (!fs.existsSync(`public/videos/processed/stream/${sourceAndRand}/`)){
+				fs.mkdirSync(`public/videos/processed/stream/${sourceAndRand}/`)
+			}
+			const cleanedFfmpegCommandArray = getFfmpegCommand(source, thumbnailRate, sourceAndRand)
 			const ffmpeg = spawn('ffmpeg', cleanedFfmpegCommandArray)
 
 			ffmpeg.stdout.on('data', (data) => {
 				console.log(`stdout: ${data}`)
 			})
 			ffmpeg.stderr.on('data', (data) => {
+				console.log(`error: ${data}`)
 				const stringifiedData = data.toString()
 				// console.error(`stderr: ${stringifiedData}`)
 				const stringFirstPart = stringifiedData.substring(0,6)
@@ -171,6 +145,23 @@ class MediaController {
 					const { duration } = h264
 					this.ws.send(90)
 					// should check to make sure not duplicate
+
+					const fileStream = fs.readFileSync(`public/videos/processed/${source}`)
+					const formData = new FormData()
+					const formHeaders = formData.getHeaders()
+					const boundaryKey = Math.random().toString(16)
+					formData.append('file', fileStream, source)
+					const dstorAddResponse = await axios({
+						url: `${DSTOR_API_URL}/api/v0/add`,
+						method: 'post',
+						headers: {
+							...formHeaders,
+							Authorization: `Bearer ${DSTOR_ACCESS_TOKEN}`,
+							'Content-Type': `multipart/form-data; boundary="${boundaryKey}"`
+						},
+						data: formData
+					})
+					const { Hash } = dstorAddResponse.data
 					video = await Video.create({
 						source,
 						rand,
@@ -178,7 +169,8 @@ class MediaController {
 						user_id: user.id,
 						description,
 						title,
-						processed: 1
+						processed: 1,
+						hash: Hash
 					})
 					this.ws.send(95)
 					// create a default user 1 view entry or some joins will break
@@ -190,7 +182,7 @@ class MediaController {
 					this.ws.send(100)
 					this.ws.send('complete: ', + rand)
 					response.status(200).send({
-						video,
+						video
 					})
 				})
 
