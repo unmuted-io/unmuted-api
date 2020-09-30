@@ -83,7 +83,7 @@ class MediaController {
 		// handle duplicates
 		ffmpeg.ffprobe(`public/videos/${source}`, async (error, metadata) => {
 			if (error) console.error('ffprobe error: ', error)
-			// console.log('input metatdata: ', metadata)
+			console.log('input metatdata: ', metadata)
 			const { format } = metadata
 			const { duration } = format
 
@@ -179,57 +179,64 @@ class MediaController {
 					'-show_streams',
 					`public/videos/processed/${source}`]
 				)
-
+				let i = 0
+				let stringifiedData = ''
 				ffprobe1.stdout.on('data', async (data) => {
-					const stringifiedData = data.toString()
-
-					console.log(`stdout: ${stringifiedData}`)
-					const ouput = JSON.parse(stringifiedData)
-					const { streams } = ouput
-					const h264 = streams.find(stream => stream.codec_name === 'h264')
-					if (!h264) return response.status(500).send()
-					const { duration } = h264
-					this.ws.send(90)
-					// should check to make sure not duplicate
-
-					const fileStream = fs.readFileSync(`public/videos/processed/stream/${sourceAndRand}/customStream.m3u8`)
-					const formData = new FormData()
-					const formHeaders = formData.getHeaders()
-					const boundaryKey = Math.random().toString(16)
-					formData.append('file', fileStream, source)
-					const dstorAddResponse = await axios({
-						url: `${DSTOR_API_URL}/api/v0/add`,
-						method: 'post',
-						headers: {
-							...formHeaders,
-							Authorization: `Bearer ${DSTOR_ACCESS_TOKEN}`,
-							'Content-Type': `multipart/form-data; boundary="${boundaryKey}"`
-						},
-						data: formData
-					})
-					const { Hash } = dstorAddResponse.data
-					video = await Video.create({
-						source,
-						rand,
-						duration: Math.floor(duration),
-						user_id: user.id,
-						description,
-						title,
-						processed: 1,
-						hash: Hash
-					})
-					this.ws.send(95)
-					// create a default user 1 view entry or some joins will break
-					const newView = new View()
-					newView.video_id = video.id
-					newView.user_id = 1
-					newView.last_position = 0
-					await newView.save()
-					this.ws.send(100)
-					this.ws.send('complete: ', + rand)
-					response.status(200).send({
-						video
-					})
+					stringifiedData += data.toString()
+					console.log('i: ', i)
+					console.log(stringifiedData)
+					let output
+					try {
+						output = JSON.parse(stringifiedData)
+						const { streams } = output
+						const h264 = streams.find(stream => stream.codec_name === 'h264')
+						if (!h264) return response.status(500).send()
+						const { duration } = h264
+						this.ws.send(90)
+						// should check to make sure not duplicate
+	
+						const fileStream = fs.readFileSync(`public/videos/processed/stream/${sourceAndRand}/customStream.m3u8`)
+						const formData = new FormData()
+						const formHeaders = formData.getHeaders()
+						const boundaryKey = Math.random().toString(16)
+						formData.append('file', fileStream, source)
+						const dstorAddResponse = await axios({
+							url: `${DSTOR_API_URL}/api/v0/add`,
+							method: 'post',
+							headers: {
+								...formHeaders,
+								Authorization: `Bearer ${DSTOR_ACCESS_TOKEN}`,
+								'Content-Type': `multipart/form-data; boundary="${boundaryKey}"`
+							},
+							data: formData
+						})
+						const { Hash } = dstorAddResponse.data
+						video = await Video.create({
+							source,
+							rand,
+							duration: Math.floor(duration),
+							user_id: user.id,
+							description,
+							title,
+							processed: 1,
+							hash: Hash
+						})
+						this.ws.send(95)
+						// create a default user 1 view entry or some joins will break
+						const newView = new View()
+						newView.video_id = video.id
+						newView.user_id = 1
+						newView.last_position = 0
+						await newView.save()
+						this.ws.send(100)
+						this.ws.send('complete: ', + rand)
+						response.status(200).send({
+							video
+						})						
+					} catch (err) {
+						console.log(`Iteration: ${i} does not parse`)
+					}
+					i++
 				})
 
 				ffprobe1.stderr.on('data', (data) => {
