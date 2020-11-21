@@ -9,30 +9,31 @@ var jwtDecode = require('jwt-decode')
 const Database = use('Database')
 
 class AuthController {
-	async register ({ request, auth, response }) {
+	async register({ request, auth, response }) {
 		const body = request.post()
 		const { username, email, password, edge_username } = body
-		let user = new User()
-		user.username = username
-		user.email = email
-		user.password = password
-		user.edge_username = edge_username
-		user = await user.save()
-		let key
-		let value
-		if (email) {
-			key = 'email'
-			value = email
-		} else if (edge_username) {
-			key = 'edge_username'
-			value = edge_username
+		try {
+			const existingUser = await User.findBy('email', email)
+			console.log('existingUser: ', existingUser)
+			if (existingUser) {
+				return response.status(400).json({ message: 'User already exists' })
+			}
+			let user = new User()
+			user.username = username
+			user.email = email
+			user.password = password
+			user.edge_username = edge_username
+			user = await user.save()
+
+			let thisUser = await User.findBy('email', email)
+			const accessToken = await auth.generate(thisUser)
+			return response.json({ user: user, access_token: accessToken })
+		} catch (error) {
+			return response.status(500).json({ message: error.message })
 		}
-		let thisUser = await User.findBy(key, value)
-		const accessToken = await auth.generate(thisUser)
-		return response.json({ user: user, access_token: accessToken })
 	}
 
-	async login ({ request, auth, response }) {
+	async login({ request, auth, response }) {
 		try {
 			const authHeader = request.header('Authorization')
 			let user
@@ -40,7 +41,7 @@ class AuthController {
 				const decodedToken = jwtDecode(authHeader.replace('Bearer ', ''))
 				user = await User.find(decodedToken.uid)
 				const tokens = await auth.withRefreshToken().generate(user)
-				const output = { user, access_token: tokens}
+				const output = { user, access_token: tokens }
 				return response.json(output)
 			} else {
 				const email = request.input('email')
@@ -54,18 +55,20 @@ class AuthController {
 			}
 		} catch (error) {
 			console.log('Login error: ', error)
-			return response.status(400).send({ message: 'Unable to log in. Please check credentials and try again.' })
+			return response.status(400).send({
+				message: 'Unable to log in. Please check credentials and try again.',
+			})
 		}
 	}
 
-	async checkUsername ({ request, response }) {
+	async checkUsername({ request, response }) {
 		const { username } = request.params
 		const result = await User.findBy('username', username)
 		const isAvailable = result ? false : true
 		return response.json({ isAvailable })
 	}
 
-	async getUserByParam ({ request, auth, response }) {
+	async getUserByParam({ request, auth, response }) {
 		const { field, value } = request.params
 		const user = await User.findBy(field, value)
 		if (!user) return response.status(204).send()
@@ -73,7 +76,7 @@ class AuthController {
 		return response.json({ user, access_token: accessToken })
 	}
 
-	async saveProfile ({ request, auth, response }) {
+	async saveProfile({ request, auth, response }) {
 		const body = request.post()
 		const user = await auth.getUser()
 		const stringifiedProfile = JSON.stringify(body)
@@ -82,23 +85,26 @@ class AuthController {
 		return response.send({ profile: stringifiedProfile })
 	}
 
-	async getChannel ({ params, response }) {
+	async getChannel({ params, response }) {
 		const { channel, id } = params
 		const channelResults = await User.findBy({
-			username: channel
+			username: channel,
 		})
 		if (!channelResults) return response.status(500).send()
 		console.log('channelResults: ', channelResults)
-		const subscriptionResults = await Database
-			.table('users')
+		const subscriptionResults = await Database.table('users')
 			.innerJoin(
 				'user_channel_subscriptions',
 				'user_channel_subscriptions.channel_id',
 				'=',
 				'users.id'
 			)
-			.where('user_channel_subscriptions.user_id', '=',  parseInt(id) || null)
-			.andWhere('user_channel_subscriptions.channel_id', '=', parseInt(channelResults.id))
+			.where('user_channel_subscriptions.user_id', '=', parseInt(id) || null)
+			.andWhere(
+				'user_channel_subscriptions.channel_id',
+				'=',
+				parseInt(channelResults.id)
+			)
 		console.log('subscriptionResults: ', subscriptionResults)
 		// if adding more fields, may return string instead of JSON?
 		const { profile } = channelResults
@@ -107,12 +113,12 @@ class AuthController {
 		const output = {
 			profileImageUrl,
 			coverImageUrl,
-			isSubscribed: subscriptionResults[0] ? true : false
+			isSubscribed: subscriptionResults[0] ? true : false,
 		}
 		return response.send(output)
 	}
 
-	async updateUsername ({ request, response }) {
+	async updateUsername({ request, response }) {
 		const body = request.post()
 		const { email, username, edge_username } = body
 		let key
@@ -130,17 +136,17 @@ class AuthController {
 		return response.json({ username: user.username })
 	}
 
-	async updateProfileImage ({ request, params, response }) {
+	async updateProfileImage({ request, params, response }) {
 		const { type } = params
 		const requirements = {
 			profile: {
 				maxHeight: 1600,
-				maxWidth: 1600
+				maxWidth: 1600,
 			},
 			cover: {
 				maxHeight: 1600,
-				maxWidth: 4800
-			}
+				maxWidth: 4800,
+			},
 		}
 		const file = request.file('file')
 		let rand = await crypto.randomBytes(8)
@@ -153,7 +159,8 @@ class AuthController {
 
 		const img = await Jimp.read(file.tmpPath)
 		const { maxHeight, maxWidth } = requirements[type]
-		img.scaleToFit(maxWidth, maxHeight)
+		img
+			.scaleToFit(maxWidth, maxHeight)
 			// .background('#FFFFFF') // only needed for PNG
 			.quality(85)
 			.write(`public/images/profile/${type}/${source}`)
@@ -161,7 +168,7 @@ class AuthController {
 		return response.status(200).send({ type, source })
 	}
 
-	async saveProfileImage ({ request, response, auth }) {
+	async saveProfileImage({ request, response, auth }) {
 		let user
 		try {
 			user = await auth.getUser()
@@ -173,12 +180,12 @@ class AuthController {
 		const requirements = {
 			profile: {
 				maxHeight: 400,
-				maxWidth: 400
+				maxWidth: 400,
 			},
 			cover: {
 				maxHeight: 400,
-				maxWidth: 1200
-			}
+				maxWidth: 1200,
+			},
 		}
 		let rand = await crypto.randomBytes(8)
 		// make a random string
@@ -191,7 +198,8 @@ class AuthController {
 		const img = await Jimp.read(file.tmpPath)
 		const { maxHeight, maxWidth } = requirements[type]
 		const path = `/images/profile/${type}/${source}`
-		img.scaleToFit(maxWidth, maxHeight)
+		img
+			.scaleToFit(maxWidth, maxHeight)
 			// .background('#FFFFFF') // only needed for PNG
 			.quality(85)
 			.write(`public/${path}`)
