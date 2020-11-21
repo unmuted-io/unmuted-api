@@ -4,7 +4,7 @@
 const Schema = use('Schema')
 
 class VideosSchema extends Schema {
-	up () {
+	up() {
 		this.create('videos', (table) => {
 			table.string('title').notNullable()
 			table.string('description', 5000)
@@ -12,15 +12,20 @@ class VideosSchema extends Schema {
 			table.string('rand').unique().notNullable()
 			table.string('hash').unique()
 			table.unique(['source', 'rand'])
-			table.integer('user_id').unsigned().references('id').inTable('users').notNullable()
+			table
+				.integer('user_id')
+				.unsigned()
+				.references('id')
+				.inTable('users')
+				.notNullable()
 			table.integer('duration').unsigned().notNullable().defaultTo(0)
-			table.boolean('processed').defaultTo(false)
+			table.float('processed').defaultTo(0)
 			table.increments()
 			table.timestamps()
 		})
 	}
 
-	down () {
+	down() {
 		this.drop('videos')
 	}
 }

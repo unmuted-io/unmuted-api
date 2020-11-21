@@ -96,7 +96,7 @@ class MediaController {
 			console.log('fileStream: ', fileStream)
 			const params = {
 				Bucket: process.env.S3_BUCKET,
-				Key: 'captaincrypto/source',
+				Key: `${user.id}/${source}`,
 				Body: fileStream,
 			}
 			// const putResponse = await Drive.put('hello.txt', )
@@ -108,6 +108,30 @@ class MediaController {
 		} catch (error) {
 			console.log('S3 put error: ', error)
 		}
+
+		// create entry in db
+		video = await Video.create({
+			source,
+			rand,
+			duration: 0,
+			user_id: user.id,
+			description,
+			title,
+			processed: 0.1,
+			hash: '',
+		})
+		this.ws.send(50)
+
+		const newView = new View()
+		newView.video_id = video.id
+		newView.user_id = 1
+		newView.last_position = 0
+		await newView.save()
+		this.ws.send(100)
+		this.ws.send('complete: ', +rand)
+		response.status(200).send({
+			video,
+		})
 
 		return response.send(rand)
 	}
