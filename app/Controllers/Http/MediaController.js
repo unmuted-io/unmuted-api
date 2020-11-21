@@ -12,6 +12,14 @@ const VideoChatController = require('./VideoChatController')
 const VideoChat = new VideoChatController() // instantiates websockets
 const { spawn } = require('child_process')
 const { getFfmpegCommand, getCustomStreamTemplate, replaceM3u8Links } = require('../../../utils/video')
+const AWS = require('aws-sdk')
+
+console.log('hello')
+
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ID,
+  secretAccessKey: process.env.AWS_SECRET
+})
 
 // set namespace
 const Video = use('App/Models/Video')
@@ -194,7 +202,7 @@ class MediaController {
 						const { duration } = h264
 						this.ws.send(90)
 						// should check to make sure not duplicate
-	
+
 						const fileStream = fs.readFileSync(`public/videos/processed/stream/${sourceAndRand}/customStream.m3u8`)
 						const formData = new FormData()
 						const formHeaders = formData.getHeaders()
@@ -232,7 +240,7 @@ class MediaController {
 						this.ws.send('complete: ', + rand)
 						response.status(200).send({
 							video
-						})						
+						})
 					} catch (err) {
 						console.log(`Iteration: ${i} does not parse`)
 					}
