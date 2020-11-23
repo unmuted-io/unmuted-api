@@ -6,10 +6,13 @@ const base32 = require('hi-base32')
 const FormData = require('form-data')
 const fs = require('fs')
 const WebSocket = require('ws')
+const ffmpeg = require('fluent-ffmpeg')
 const axios = require('axios')
 const VideoChatController = require('./VideoChatController')
 const VideoChat = new VideoChatController() // instantiates websockets
 const AWS = require('aws-sdk')
+const utils = require('../../../utils/video')
+const { getCreateJobJSON } = utils
 
 // Use bluebird implementation of Promise
 if (typeof Promise === 'undefined') {
@@ -21,6 +24,8 @@ const s3 = new AWS.S3({
 	accessKeyId: process.env.AWS_KEY,
 	secretAccessKey: process.env.AWS_SECRET,
 })
+
+const transcoder = new AWS.ElasticTranscoder({ region: process.env.S3_REGION })
 
 // set namespace
 const Video = use('App/Models/Video')
@@ -114,8 +119,40 @@ class MediaController {
 			}
 
 			const data = await putFile()
-			return response.json({
-				message: 'hello',
+			console.log('putFile data: ', data)
+			// create entry in db
+			video = await Video.create({
+				source,
+				rand,
+				duration: 0,
+				user_id: user.id,
+				description,
+				title,
+				processed: 0.1,
+				hash: rand,
+			})
+			this.ws.send(50)
+
+			const newView = new View()
+			newView.video_id = video.id
+			newView.user_id = 1
+			newView.last_position = 0
+			await newView.save()
+			this.ws.send(100)
+			this.ws.send('complete: ', rand)
+			response.status(200).send({
+				video,
+			})
+
+			response.send(rand)
+			const createJobInput = getCreateJobJSON({
+				userId: user.id,
+				time,
+				source,
+			})
+			transcoder.createJob(createJobInput, (err, data) => {
+				if (err) console.log('err: ', err)
+				console.log('data: ', data)
 			})
 		} catch (error) {
 			console.log('S3 put error: ', error)
