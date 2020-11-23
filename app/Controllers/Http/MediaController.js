@@ -11,6 +11,7 @@ const axios = require('axios')
 const VideoChatController = require('./VideoChatController')
 const VideoChat = new VideoChatController() // instantiates websockets
 const AWS = require('aws-sdk')
+const CronJob = require('cron').CronJob
 const utils = require('../../../utils/video')
 const { getCreateJobJSON } = utils
 
@@ -38,7 +39,7 @@ class MediaController {
 		this.AWS_ID = AWS_ID
 		this.AWS_SECRET = AWS_SECRET
 		this.AWS_BUCKET_NAME = AWS_BUCKET_NAME
-
+		this.cronIterator = 0
 		console.log('in VideoController constructor')
 		this.ws = new WebSocket('ws://localhost:9824')
 		this.ws.on('open', () => {
@@ -56,6 +57,22 @@ class MediaController {
 		this.ws.on('message', (data) => {
 			// console.log(`controller received messgae: ${data}`)
 		})
+
+		this.job = new CronJob(
+			'1 * * * * *',
+			() => {
+				this.cron()
+			},
+			null,
+			true,
+			'America/Los_Angeles'
+		)
+		this.job.start()
+	}
+
+	async cron() {
+		this.cronIterator++
+		console.log(this.cronIterator)
 	}
 
 	/**
@@ -105,7 +122,7 @@ class MediaController {
 			const fileStream = fs.readFileSync(`public/videos/${source}`)
 			const params = {
 				Bucket: process.env.S3_BUCKET,
-				Key: `${user.id}/${source}`,
+				Key: `a/${user.id}/${source}`,
 				Body: fileStream,
 			}
 
@@ -120,6 +137,24 @@ class MediaController {
 
 			const data = await putFile()
 			console.log('putFile data: ', data)
+
+			const getObjectParams = {
+				Bucket: process.env.S3_BUCKET,
+				Key: `a/${user.id}/${source}`,
+			}
+
+			const getObject = () => {
+				return new Promise((resolve, reject) => {
+					s3.getObject(getObjectParams, (err, data) => {
+						if (err) reject(err)
+						resolve(data)
+					})
+				})
+			}
+
+			const getObjectData = await getObject()
+			console.log('getObjectData: ', getObjectData)
+			this.ws.send(20)
 			// create entry in db
 			video = await Video.create({
 				source,
