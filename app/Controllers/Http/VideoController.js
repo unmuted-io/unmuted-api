@@ -18,7 +18,6 @@ const Database = use('Database')
 const View = use('App/Models/View')
 
 class VideoController {
-
 	/**
 	 * Show a list of all videos.
 	 * GET videos
@@ -38,14 +37,16 @@ class VideoController {
 	async getRecommended({ params }) {
 		const { quantity, username } = params
 		const decodedUsername = decodeURI(username)
-		const userRows = await Database.table('users').where('username', decodedUsername)
+		const userRows = await Database.table('users').where(
+			'username',
+			decodedUsername
+		)
 		const user = userRows[0]
 		const limit = quantity ? quantity : 20
 		let videos
 		if (user) {
 			// videos and their creators, with views where
-			const watchedVideosSubquery = Database
-				.from('views')
+			const watchedVideosSubquery = Database.from('views')
 				.where('user_id', user.id)
 				.select('video_id')
 			videos = await Database.select([
@@ -56,7 +57,7 @@ class VideoController {
 				'videos.created_at',
 				'videos.duration',
 				'users.username',
-				'users.profile'
+				'users.profile',
 			])
 				.from('videos')
 				.sum('views.count AS count')
@@ -75,7 +76,7 @@ class VideoController {
 				'videos.created_at',
 				'videos.duration',
 				'users.username',
-				'users.profile'
+				'users.profile',
 			])
 				.from('videos')
 				.sum('views.count AS count')
@@ -212,11 +213,13 @@ class VideoController {
 		const { quantity, username } = params
 		if (!username) return response.status(401).send()
 		const decodedUsername = decodeURI(username)
-		const userRows = await Database.table('users').where('username', decodedUsername)
+		const userRows = await Database.table('users').where(
+			'username',
+			decodedUsername
+		)
 		const user = userRows[0]
 		const limit = quantity ? quantity : 20
-		const watchedVideosSubquery = Database
-			.from('views')
+		const watchedVideosSubquery = Database.from('views')
 			.where('user_id', user.id)
 			.select('video_id')
 		const videos = await Database.select([
@@ -228,7 +231,7 @@ class VideoController {
 			'videos.duration',
 			'users.username',
 			'views.updated_at',
-			'views.last_position'
+			'views.last_position',
 		])
 			.from('videos')
 			.sum('views.count AS count')
