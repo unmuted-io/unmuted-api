@@ -167,13 +167,13 @@ class MediaController {
 				hash: rand,
 			})
 			this.ws.send(50)
-
+			console.log('video: ', video.toJSON())
 			const newView = new View()
 			newView.video_id = video.id
 			newView.user_id = 1
 			newView.last_position = 0
 			await newView.save()
-			this.ws.send(100)
+			this.ws.send(60)
 			this.ws.send('complete: ', rand)
 			response.status(200).send({
 				video,
@@ -185,10 +185,19 @@ class MediaController {
 				time,
 				source,
 			})
-			transcoder.createJob(createJobInput, (err, data) => {
-				if (err) console.log('err: ', err)
-				console.log('data: ', data)
-			})
+
+			const createJob = () => {
+				return new Promise((resolve, reject) => {
+					transcoder.createJob(createJobInput, (err, data) => {
+						if (err) reject(err)
+						resolve(data)
+					})
+				})
+			}
+
+			await createJob()
+			video.processed = 0.7
+			await video.save()
 		} catch (error) {
 			console.log('S3 put error: ', error)
 		}

@@ -5,16 +5,15 @@ const Model = use('Model')
 
 class Video extends Model {
 	// this clause does not appear to be working
-	static get hidden () {
-	  return ['id']
+	static get hidden() {
+		return []
 	}
 
-
-	user () {
+	user() {
 		return this.belongsTo('App/Models/User')
 	}
 
-	view () {
+	view() {
 		return this.hasMany('App/Models/View')
 	}
 }

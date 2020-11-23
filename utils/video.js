@@ -73,10 +73,10 @@ const getCreateJobJSON = ({ time, userId, source }) => {
 				Container: 'auto',
 			},
 		],
-		OutputKeyPrefix: `a/b`,
+		OutputKeyPrefix: `a/${userId}`, // folders
 		Outputs: [
 			{
-				Key: `a/c`,
+				Key: `/${source}/${source}-`, // folder and m3u8 name
 				ThumbnailPattern: '',
 				Rotate: 'auto',
 				PresetId: '1351620000001-200050',
@@ -86,8 +86,8 @@ const getCreateJobJSON = ({ time, userId, source }) => {
 		Playlists: [
 			{
 				Format: 'HLSv3',
-				Name: `a/d`,
-				OutputKeys: [`a/c`],
+				Name: `/${source}/${source}`, // folder and _____ name?
+				OutputKeys: [`/${source}/${source}-`], // folder and prefix before ________.ts
 			},
 		],
 		UserMetadata: {
