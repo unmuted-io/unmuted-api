@@ -88,6 +88,7 @@ class MediaController {
 		const { DSTOR_ACCESS_TOKEN, DSTOR_API_URL } = process.env
 		const { description, title, username } = request.body
 		const file = request.file('file')
+		console.log('attached file: ', file)
 		const userRows = await Database.table('users').where('username', username)
 		const user = userRows[0]
 		let rand = await crypto.randomBytes(8)
@@ -96,8 +97,8 @@ class MediaController {
 
 		const time = new Date().getTime()
 		// set the source filename
-		const sourceAndRand = `${time}-${rand}`
-		const source = `${sourceAndRand}.mp4`
+		const timeAndRand = `${time}-${rand}`
+		const source = `${timeAndRand}.mp4`
 		console.log('file: ', file)
 		// move the file from temp to public folder
 		console.log('source: ', source)
@@ -163,7 +164,7 @@ class MediaController {
 				user_id: user.id,
 				description,
 				title,
-				processed: 0.1,
+				processed: JSON.stringify({ progress: 0.1 }),
 				hash: rand,
 			})
 			this.ws.send(50)
@@ -184,6 +185,7 @@ class MediaController {
 				userId: user.id,
 				time,
 				source,
+				rand,
 			})
 
 			const createJob = () => {
@@ -196,8 +198,30 @@ class MediaController {
 			}
 
 			await createJob()
-			video.processed = 0.7
+			const processedJSON = JSON.parse(video.processed)
+			video.processed = JSON.stringify({
+				...processedJSON,
+				progress: 0.6,
+			})
 			await video.save()
+
+			const listObjects = () => {
+				return new Promise((resolve, reject) => {
+					s3.listObjects(
+						{
+							Bucket: process.env.S3_BUCKET,
+							Prefix: `a/${user.id}/${source}`,
+						},
+						(err, data) => {
+							if (err) reject(err)
+							resolve(data)
+						}
+					)
+				})
+			}
+
+			const bucketObjects = await listObjects()
+			console.log('bucketObjects: ', bucketObjects)
 		} catch (error) {
 			console.log('S3 put error: ', error)
 		}
