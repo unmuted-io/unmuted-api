@@ -19,7 +19,7 @@ class VideosSchema extends Schema {
 				.inTable('users')
 				.notNullable()
 			table.integer('duration').unsigned().notNullable().defaultTo(0)
-			table.float('processed').defaultTo(0)
+			table.string('processed').defaultTo('{}')
 			table.increments()
 			table.timestamps()
 		})

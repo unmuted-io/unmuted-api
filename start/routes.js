@@ -36,6 +36,7 @@ Route.get(
 
 // multimedia processing
 Route.post('/videos', 'MediaController.store').middleware('auth')
+Route.post('/videos/message', 'MediaController.message')
 
 // users and auth
 Route.post('/auth/register', 'AuthController.register')

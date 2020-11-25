@@ -35,11 +35,11 @@ const View = use('App/Models/View')
 
 class MediaController {
 	constructor() {
+		console.log('MediaController onstructor being called')
 		const { AWS_ID, AWS_SECRET, AWS_BUCKET_NAME } = process.env
 		this.AWS_ID = AWS_ID
 		this.AWS_SECRET = AWS_SECRET
 		this.AWS_BUCKET_NAME = AWS_BUCKET_NAME
-		this.cronIterator = 0
 		console.log('in VideoController constructor')
 		this.ws = new WebSocket('ws://localhost:9824')
 		this.ws.on('open', () => {
@@ -57,22 +57,134 @@ class MediaController {
 		this.ws.on('message', (data) => {
 			// console.log(`controller received messgae: ${data}`)
 		})
-
-		this.job = new CronJob(
-			'1 * * * * *',
-			() => {
-				this.cron()
-			},
-			null,
-			true,
-			'America/Los_Angeles'
-		)
-		this.job.start()
 	}
 
-	async cron() {
-		this.cronIterator++
-		console.log(this.cronIterator)
+	getObject(params) {
+		return new Promise((resolve, reject) => {
+			s3.getObject(params, (err, data) => {
+				if (err) reject(err)
+				resolve(data)
+			})
+		})
+	}
+
+	async message({ request, response }) {
+		const rawBody = request.raw()
+		const body = JSON.parse(rawBody)
+		const { Message } = body
+		const { userMetadata, state } = JSON.parse(Message)
+		const { rand, time } = userMetadata
+		const video = await Video.findBy({ rand })
+		const processedJSON = JSON.parse(video.processed)
+		const COMPLETED = 0.8
+		if (processedJSON.progress === COMPLETED) return
+		const progressMap = {
+			PROGRESSING: 0.7,
+			COMPLETED: 0.8,
+		}
+		video.processed = JSON.stringify({
+			...processedJSON,
+			progress: progressMap[state],
+		})
+		await video.save()
+		if (state === 'COMPLETED') {
+			console.log('COMPLETED')
+			const Prefix = `a/${video.user_id}/${time}-${rand}/400k`
+			const listObjects = () => {
+				return new Promise((resolve, reject) => {
+					s3.listObjects(
+						{
+							Bucket: process.env.S3_PROCESSED_BUCKET,
+							Prefix,
+						},
+						(err, data) => {
+							if (err) reject(err)
+							resolve(data)
+						}
+					)
+				})
+			}
+
+			const bucketObjects = await listObjects()
+			console.log('completed bucketObjects: ', bucketObjects)
+
+			/////////////////////////
+			const { Contents } = bucketObjects
+
+			const objectsToGet = Contents.map((file, index) => {
+				const fileKey = file.Key.replace(Prefix, '')
+				return {
+					file,
+					fileKey,
+					progress: false,
+					index,
+				}
+			})
+			console.log('objectsToGet: ', objectsToGet)
+			const getObjectAttempt = (Key, index) => {
+				const params = {
+					Bucket: process.env.S3_PROCESSED_BUCKET,
+					Key,
+				}
+				return new Promise((resolve, reject) => {
+					const getObject = async (iterator = 0) => {
+						try {
+							const result = await this.getObject(params)
+							console.log('result is: ', result)
+							resolve({
+								result,
+								index,
+							})
+						} catch (err) {
+							console.log('getObject error: ', err)
+							if (iterator < 10) {
+								setTimeout(() => getObject(iterator), 1000)
+								iterator++
+							} else {
+								reject(false)
+							}
+						}
+					}
+					getObject()
+				})
+			}
+
+			let promisesToGet = []
+			const finalResults = {}
+			for (let i = 0; i < 4; i++) {
+				const fileKey = objectsToGet[i].file.Key
+				promisesToGet.push(getObjectAttempt(fileKey, i))
+			}
+			let masterIterator = 4
+			let finished = 0
+			while (promisesToGet.length > 0) {
+				console.log('masterIterator: ', masterIterator)
+				try {
+					const value = await Promise.race(promisesToGet)
+					const { result, index } = value
+					finalResults[index] = result.Etag
+					console.log('completed index: ', index)
+					finished++
+					if (finished === objectsToGet.length - 1) {
+						console.log('FINISHED!')
+						console.log('finalResults: ', finalResults)
+						return
+					}
+					if (masterIterator < objectsToGet.length - 1) {
+						masterIterator++
+						promisesToGet[index] = getObjectAttempt(
+							objectsToGet[masterIterator].file.Key,
+							masterIterator
+						)
+					}
+				} catch (err) {
+					console.log(err)
+					return
+				}
+			}
+
+			/////////////////////////
+		}
 	}
 
 	/**
@@ -144,16 +256,7 @@ class MediaController {
 				Key: `a/${user.id}/${source}`,
 			}
 
-			const getObject = () => {
-				return new Promise((resolve, reject) => {
-					s3.getObject(getObjectParams, (err, data) => {
-						if (err) reject(err)
-						resolve(data)
-					})
-				})
-			}
-
-			const getObjectData = await getObject()
+			const getObjectData = await this.getObject(getObjectParams)
 			console.log('getObjectData: ', getObjectData)
 			this.ws.send(20)
 			// create entry in db
@@ -204,24 +307,6 @@ class MediaController {
 				progress: 0.6,
 			})
 			await video.save()
-
-			const listObjects = () => {
-				return new Promise((resolve, reject) => {
-					s3.listObjects(
-						{
-							Bucket: process.env.S3_BUCKET,
-							Prefix: `a/${user.id}/${source}`,
-						},
-						(err, data) => {
-							if (err) reject(err)
-							resolve(data)
-						}
-					)
-				})
-			}
-
-			const bucketObjects = await listObjects()
-			console.log('bucketObjects: ', bucketObjects)
 		} catch (error) {
 			console.log('S3 put error: ', error)
 		}

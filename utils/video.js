@@ -27,7 +27,7 @@ const getCreateJobJSON = ({ time, userId, source, rand }) => {
 		OutputKeyPrefix: `a/${userId}/${timeAndRand}`, // folders
 		Outputs: [
 			{
-				Key: `/${timeAndRand}/${timeAndRand}-`, // folder and m3u8 name
+				Key: `/400k/${timeAndRand}`, // folder and specific playlist m3u8 name
 				ThumbnailPattern: '',
 				Rotate: 'auto',
 				PresetId: '1351620000001-200050',
@@ -37,12 +37,13 @@ const getCreateJobJSON = ({ time, userId, source, rand }) => {
 		Playlists: [
 			{
 				Format: 'HLSv3',
-				Name: `/${timeAndRand}_400K`, // folder and _____.m3u8?
-				OutputKeys: [`/${timeAndRand}/${timeAndRand}-`], // folder and prefix before ________.ts
+				Name: `/${timeAndRand}-master`, // folder and master _____.m3u8?
+				OutputKeys: [`/400k/${timeAndRand}`], // folder and prefix before ________.ts
 			},
 		],
 		UserMetadata: {
-			test1: 'test1value',
+			rand,
+			time: time.toString(),
 		},
 		PipelineId: '1605831556406-woiqni',
 	}
