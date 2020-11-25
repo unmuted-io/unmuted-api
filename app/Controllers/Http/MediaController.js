@@ -4,14 +4,12 @@
 const crypto = require('crypto')
 const base32 = require('hi-base32')
 const FormData = require('form-data')
-const fs = require('fs')
+const fs = require('fs').promises
 const WebSocket = require('ws')
-const ffmpeg = require('fluent-ffmpeg')
 const axios = require('axios')
 const VideoChatController = require('./VideoChatController')
 const VideoChat = new VideoChatController() // instantiates websockets
 const AWS = require('aws-sdk')
-const CronJob = require('cron').CronJob
 const utils = require('../../../utils/video')
 const { getCreateJobJSON } = utils
 
@@ -134,6 +132,7 @@ class MediaController {
 							resolve({
 								result,
 								index,
+								Key,
 							})
 						} catch (err) {
 							console.log('getObject error: ', err)
@@ -151,21 +150,24 @@ class MediaController {
 
 			let promisesToGet = []
 			const finalResults = {}
-			for (let i = 0; i < 4; i++) {
+			const maxIteration =
+				// indexes to get
+				objectsToGet.length - 1 < 4 ? objectsToGet.length - 1 : 4
+			for (let i = 0; i < maxIteration + 1; i++) {
 				const fileKey = objectsToGet[i].file.Key
 				promisesToGet.push(getObjectAttempt(fileKey, i))
 			}
-			let masterIterator = 4
+			let masterIterator = maxIteration
 			let finished = 0
 			while (promisesToGet.length > 0) {
 				console.log('masterIterator: ', masterIterator)
 				try {
 					const value = await Promise.race(promisesToGet)
-					const { result, index } = value
+					const { result, index, Key } = value
 					finalResults[index] = result.Etag
-					console.log('completed index: ', index)
+					const [prefix, userId, folder, bitrate] = Key.split('/')
 					finished++
-					if (finished === objectsToGet.length - 1) {
+					if (finished === objectsToGet.length) {
 						console.log('FINISHED!')
 						console.log('finalResults: ', finalResults)
 						return
@@ -176,13 +178,29 @@ class MediaController {
 							objectsToGet[masterIterator].file.Key,
 							masterIterator
 						)
+					} else {
+						delete promisesToGet[index]
 					}
+					const createFiles = async () => {
+						await fs.mkdir(
+							`public/videos/processed/stream/${prefix}/${userId}/${folder}/${bitrate}`,
+							{ recursive: true }
+						)
+						await fs.writeFile(
+							`public/videos/processed/stream/${Key}`,
+							result.Body
+						)
+					}
+					createFiles()
+					console.log('completed index: ', index)
 				} catch (err) {
 					console.log(err)
 					return
 				}
 			}
 
+			/////////////////////////
+			// now upload to dStor //
 			/////////////////////////
 		}
 	}
@@ -232,7 +250,7 @@ class MediaController {
 		let progress = 0
 
 		try {
-			const fileStream = fs.readFileSync(`public/videos/${source}`)
+			const fileStream = await fs.readFile(`public/videos/${source}`)
 			const params = {
 				Bucket: process.env.S3_BUCKET,
 				Key: `a/${user.id}/${source}`,
