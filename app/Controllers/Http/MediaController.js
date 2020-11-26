@@ -202,8 +202,9 @@ class MediaController {
 							resultIndex
 						)
 					} else {
-						const lastValues = await Promise.all(promisesToGet)
-						lastValues.forEach((value) => {
+						const finalValues = await Promise.all(promisesToGet)
+						promisesToGet = []
+						finalValues.forEach((value) => {
 							const { result, resultIndex, Key, objectIndex } = value
 							console.log(
 								'result is: ',
@@ -220,6 +221,7 @@ class MediaController {
 									writeIterator++
 								}
 							)
+							finished++
 						})
 					}
 				} catch (err) {
