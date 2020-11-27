@@ -75,18 +75,18 @@ class MediaController {
 		const { userMetadata, state } = JSON.parse(Message)
 		const { rand, time } = userMetadata
 		const video = await Video.findBy({ rand })
-		const processedJSON = JSON.parse(video.processed)
-		const COMPLETED = 0.8
-		if (processedJSON.progress === COMPLETED) return
+		const ongoingProcessedJson = JSON.parse(video.processed)
+		if (ongoingProcessedJson.progress === 'TRANSCODING_COMPLETE') return
 		const progressMap = {
-			PROGRESSING: 0.7,
-			COMPLETED: 0.8,
+			PROGRESSING: 'TRANSCODING_IN_PROGRESS',
+			COMPLETED: 'TRANSCODING_COMPLETE',
 		}
-		video.processed = JSON.stringify({
-			...processedJSON,
-			progress: progressMap[state],
-		})
+
+		ongoingProcessedJson.progress = progressMap[state]
+		ongoingProcessedJson.files = {}
+		video.processed = JSON.stringify(ongoingProcessedJson)
 		await video.save()
+		// done transcoding
 		if (state === 'COMPLETED') {
 			console.log('COMPLETED')
 			const Prefix = `a/${video.user_id}/${time}-${rand}/400k`
@@ -110,9 +110,9 @@ class MediaController {
 
 			/////////////////////////
 			const { Contents } = bucketObjects
-
 			const objectsToGet = Contents.map((file, index) => {
 				const fileKey = file.Key.replace(Prefix, '')
+				ongoingProcessedJson.files[file.Key] = 'TRANSCODED_FILE_REGISTERED'
 				return {
 					file,
 					fileKey,
@@ -120,6 +120,13 @@ class MediaController {
 					index,
 				}
 			})
+			ongoingProcessedJson.progress = 'TRANSCODED_FILES_REGISTERED'
+			try {
+				video.processed = JSON.stringify(ongoingProcessedJson)
+				await video.save()
+			} catch (err) {
+				console.log('video save error: ', err)
+			}
 			console.log('objectsToGet: ', objectsToGet)
 			const getObjectAttempt = (Key, objectIndex, resultIndex) => {
 				const params = {
@@ -176,6 +183,7 @@ class MediaController {
 				console.log('masterIterator: ', masterIterator)
 				console.log('writeIterator: ', writeIterator)
 				try {
+					// await for next resolve
 					const value = await Promise.race(promisesToGet)
 					const { result, resultIndex, Key, objectIndex } = value
 					console.log('result is: ', result, 'result index is: ', resultIndex)
@@ -184,8 +192,12 @@ class MediaController {
 						`public/videos/processed/stream/${Key}`,
 						result.Body,
 						(err) => {
-							if (err) console.log('writeFile error: ', err)
-							writeIterator++
+							if (err) {
+								console.log('writeFile error: ', err)
+							} else {
+								ongoingProcessedJson.files[Key] = 'TRANSCODED_FILE_DOWNLOADED'
+								writeIterator++
+							}
 						}
 					)
 					finished++
@@ -202,6 +214,11 @@ class MediaController {
 							resultIndex
 						)
 					} else {
+						promisesToGet[resultIndex] = getObjectAttempt(
+							objectsToGet[masterIterator].file.Key,
+							masterIterator,
+							resultIndex
+						)
 						const finalValues = await Promise.all(promisesToGet)
 						promisesToGet = []
 						finalValues.forEach((value) => {
@@ -216,9 +233,31 @@ class MediaController {
 							fs.writeFile(
 								`public/videos/processed/stream/${Key}`,
 								result.Body,
-								(err) => {
-									if (err) console.log('writeFile error: ', err)
-									writeIterator++
+								async (err) => {
+									if (err) {
+										console.log('writeFile error: ', err)
+									} else {
+										console.log('last files being written')
+										ongoingProcessedJson.files[Key] =
+											'TRANSCODED_FILE_DOWNLOADED'
+										if (writeIterator === objectsToGet.length - 1) {
+											console.log('last file save clause being executed')
+											let fileDownloadProgress =
+												'TRANSCODED_FILES_DOWNLOAD_COMPLETE'
+											Object.values(ongoingProcessedJson.files).forEach(
+												(status) => {
+													if (status !== 'TRANSCODED_FILE_DOWNLOADED') {
+														fileDownloadProgress =
+															'TRANSCODED_FILES_PARTIAL_DOWNLOAD'
+													}
+												}
+											)
+											ongoingProcessedJson.progress = fileDownloadProgress
+											video.processed = JSON.stringify(ongoingProcessedJson)
+											await video.save()
+										}
+										writeIterator++
+									}
 								}
 							)
 							finished++
@@ -226,7 +265,6 @@ class MediaController {
 					}
 				} catch (err) {
 					console.log(err)
-					return
 				}
 			}
 
@@ -309,6 +347,7 @@ class MediaController {
 			console.log('getObjectData: ', getObjectData)
 			this.ws.send(20)
 			// create entry in db
+			const ongoingProcessedJson = { progress: 'UPLOADED' }
 			video = await Video.create({
 				source,
 				rand,
@@ -316,7 +355,7 @@ class MediaController {
 				user_id: user.id,
 				description,
 				title,
-				processed: JSON.stringify({ progress: 0.1 }),
+				processed: JSON.stringify(ongoingProcessedJson),
 				hash: rand,
 			})
 			this.ws.send(50)
@@ -350,11 +389,8 @@ class MediaController {
 			}
 
 			await createJob()
-			const processedJSON = JSON.parse(video.processed)
-			video.processed = JSON.stringify({
-				...processedJSON,
-				progress: 0.6,
-			})
+			ongoingProcessedJson.progress = 'TRANSCODING_STARTED'
+			video.processed = JSON.stringify(ongoingProcessedJson)
 			await video.save()
 		} catch (error) {
 			console.log('S3 put error: ', error)
