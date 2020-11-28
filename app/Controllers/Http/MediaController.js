@@ -3,17 +3,17 @@
 'use strict'
 const crypto = require('crypto')
 const base32 = require('hi-base32')
-const FormData = require('form-data')
 const fs = require('fs')
 const WebSocket = require('ws')
 const ffmpeg = require('fluent-ffmpeg')
-const axios = require('axios')
 const VideoChatController = require('./VideoChatController')
 const VideoChat = new VideoChatController() // instantiates websockets
 const AWS = require('aws-sdk')
 const CronJob = require('cron').CronJob
-const utils = require('../../../utils/video')
-const { getCreateJobJSON } = utils
+const videoUtils = require('../../../utils/video')
+const dstorUtils = require('../../../utils/dstor')
+const { getCreateJobJSON } = videoUtils
+const { uploadToDstor } = dstorUtils
 
 // Use bluebird implementation of Promise
 if (typeof Promise === 'undefined') {
@@ -255,6 +255,7 @@ class MediaController {
 											ongoingProcessedJson.progress = fileDownloadProgress
 											video.processed = JSON.stringify(ongoingProcessedJson)
 											await video.save()
+											this.uploadVideoToDstor(rand)
 										}
 										writeIterator++
 									}
@@ -274,6 +275,41 @@ class MediaController {
 		}
 	}
 
+	async uploadVideoToDstor(rand) {
+		const video = await Video.findBy({ rand })
+		const ongoingProcessedJson = JSON.parse(video.processed)
+		const { files } = ongoingProcessedJson
+		let allCompleted = true
+		const playlist = {}
+		for (const file in files) {
+			const filePath = `public/videos/processed/stream/${file}`
+			const fileStream = fs.readFileSync(filePath)
+			if (file.includes('.m3u8')) {
+				playlist.path = file
+				playlist.contents = fileStream
+				console.log('playlist: ', playlist)
+				console.log('playlistContents: ', fileStream.toString())
+			}
+			try {
+				const folderPathList = file.split('/')
+				const fileName = folderPathList[folderPathList.length - 1]
+				delete folderPathList[folderPathList.length - 1]
+				const folderPath = `/${folderPathList.join('/')}`
+				const Hash = await uploadToDstor(fileStream, fileName, folderPath)
+				console.log('Hash is: ', Hash)
+				ongoingProcessedJson.files[file] = Hash
+			} catch (err) {
+				console.log('dStor upload failed for ', file, 'with err: ', err)
+				allCompleted = false
+			}
+		}
+		ongoingProcessedJson.progress = allCompleted
+			? 'TRANSCODED_FILES_DSTOR_UPLOAD_COMPLETE'
+			: 'TRANSCODED_FILES_DSTOR_UPLOAD_INCOMPLETE'
+		video.processed = JSON.stringify(ongoingProcessedJson)
+		video.save()
+	}
+
 	/**
 	 * Create/save a new video.
 	 * POST videos
@@ -284,7 +320,6 @@ class MediaController {
 	 */
 
 	async store({ request, response }) {
-		const { DSTOR_ACCESS_TOKEN, DSTOR_API_URL } = process.env
 		const { description, title, username } = request.body
 		const file = request.file('file')
 		console.log('attached file: ', file)
