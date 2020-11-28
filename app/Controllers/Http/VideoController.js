@@ -108,6 +108,7 @@ class VideoController {
 			'videos.description',
 			'videos.rand',
 			'videos.source',
+			'videos.processed',
 			'videos.hash',
 			'videos.created_at',
 			'users.username',
