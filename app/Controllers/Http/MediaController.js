@@ -168,8 +168,8 @@ class MediaController {
 			let promisesToGet = []
 			const finalResults = {}
 			let writeIterator = 0
-			const maxIteration =
-				objectsToGet.length - 1 < 4 ? objectsToGet.length - 1 : 4
+			const indicesToGet = objectsToGet.length - 1
+			const maxIteration = indicesToGet < 4 ? indicesToGet : 4
 			for (let objectIndex = 0; objectIndex < maxIteration; objectIndex++) {
 				const fileKey = objectsToGet[objectIndex].file.Key
 				promisesToGet.push(getObjectAttempt(fileKey, objectIndex, objectIndex))
@@ -186,14 +186,13 @@ class MediaController {
 					// await for next resolve
 					const value = await Promise.race(promisesToGet)
 					const { result, resultIndex, Key, objectIndex } = value
-					console.log('result is: ', result, 'result index is: ', resultIndex)
 					finalResults[objectIndex] = result.Etag
 					fs.writeFile(
 						`public/videos/processed/stream/${Key}`,
 						result.Body,
 						(err) => {
 							if (err) {
-								console.log('writeFile error: ', err)
+								console.log(`writeFile error for file ${Key}: `, err)
 							} else {
 								ongoingProcessedJson.files[Key] = 'TRANSCODED_FILE_DOWNLOADED'
 								writeIterator++
@@ -207,12 +206,12 @@ class MediaController {
 						return
 					}
 					if (masterIterator < objectsToGet.length - 1) {
-						masterIterator++
 						promisesToGet[resultIndex] = getObjectAttempt(
 							objectsToGet[masterIterator].file.Key,
 							masterIterator,
 							resultIndex
 						)
+						masterIterator++
 					} else {
 						promisesToGet[resultIndex] = getObjectAttempt(
 							objectsToGet[masterIterator].file.Key,
