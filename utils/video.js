@@ -28,9 +28,9 @@ const getCreateJobJSON = ({ time, userId, source, rand }) => {
 		Outputs: [
 			{
 				Key: `/400k/${timeAndRand}`, // folder and specific playlist m3u8 name
-				ThumbnailPattern: '',
+				ThumbnailPattern: `/${timeAndRand}/thumb_{count}`,
 				Rotate: 'auto',
-				PresetId: '1351620000001-200050',
+				PresetId: '1607203222250-n0nyn6',
 				SegmentDuration: '10',
 			},
 		],
