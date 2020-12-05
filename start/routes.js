@@ -66,3 +66,8 @@ Route.post(
 	'/subscription/:userId/:channel',
 	'UserChannelSubscriptionController.saveUserChannelSubscription'
 )
+
+Route.post(
+	'/blockchain/confirmation',
+	'BlockchainController.getBlockchainConfirmation'
+)
