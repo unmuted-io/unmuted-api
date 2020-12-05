@@ -69,5 +69,5 @@ Route.post(
 
 Route.post(
 	'/blockchain/confirmation',
-	'BlockchainController.getBlockchainConfirmation'
+	'BlockchainController.getBlockchainConfirmationCode'
 )

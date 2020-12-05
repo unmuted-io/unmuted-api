@@ -26,7 +26,6 @@ class UserSeeder {
 		user2.password = 'Test123456'
 		user2.profile =
 			'{"coverImageUrl": "/images/profile/cover/1589512002590-3HPAXNVXEDHFY.jpg", "profileImageUrl": "/images/profile/profile/1589512026061-AHQ67XXROLR2U.jpg"}'
-		user2.edge_username = 'captaincrypto'
 		user2 = await user2.save()
 		await Factory.model('App/Models/User').createMany(1)
 	}
