@@ -1,6 +1,10 @@
-const { DSTOR_API_URL, AWS_KEY, AWS_SECRET } = process.env
 const AWS = require('aws-sdk')
 const fs = require('fs')
+const dstorUtils = require('./dstor')
+const { uploadToDstor } = dstorUtils
+const { DSTOR_API_URL, AWS_KEY, AWS_SECRET } = process.env
+
+const Video = use('App/Models/Video')
 
 const s3 = new AWS.S3({
 	accessKeyId: AWS_KEY,
@@ -205,6 +209,102 @@ const multiTryS3Download = async (
 	/////////////////////////
 }
 
+const uploadThumbnailsToDstor = async (rand) => {
+	const { DSTOR_API_URL } = process.env
+	const video = await Video.findBy({ rand })
+	const ongoingProcessedJson = JSON.parse(video.processed)
+	const { files } = ongoingProcessedJson.thumbnails
+	let allCompleted = true
+	const playlist = {}
+
+	for (const file in files) {
+		const filePath = `public/videos/processed/stream/${file}`
+		const fileStream = fs.readFileSync(filePath)
+		try {
+			const folderPathList = file.split('/')
+			const fileName = folderPathList[folderPathList.length - 1]
+			delete folderPathList[folderPathList.length - 1]
+			const folderPath = `/${folderPathList.join('/')}`
+			const Hash = await uploadToDstor(fileStream, fileName, folderPath)
+			console.log('Hash is: ', Hash)
+			ongoingProcessedJson.thumbnails.files[file] = Hash
+		} catch (err) {
+			console.log('dStor upload failed for ', file, 'with err: ', err)
+			allCompleted = false
+		}
+	}
+	ongoingProcessedJson.thumbnails.progress = allCompleted
+		? 'FILES_DSTOR_UPLOAD_COMPLETE'
+		: 'FILES_DSTOR_UPLOAD_INCOMPLETE'
+	video.processed = JSON.stringify(ongoingProcessedJson)
+	video.save()
+}
+
+const uploadVideoToDstor = async (rand) => {
+	const { DSTOR_API_URL } = process.env
+	const video = await Video.findBy({ rand })
+	const ongoingProcessedJson = JSON.parse(video.processed)
+	const { files } = ongoingProcessedJson.video
+	let allCompleted = true
+	const playlist = {}
+
+	for (const file in files) {
+		const filePath = `public/videos/processed/stream/${file}`
+		const fileStream = fs.readFileSync(filePath)
+		if (file.includes('.m3u8')) {
+			playlist.path = file
+			playlist.contents = fileStream.toString()
+			console.log('playlist: ', playlist)
+			console.log('playlistContents: ', fileStream.toString())
+		}
+		try {
+			const folderPathList = file.split('/')
+			const fileName = folderPathList[folderPathList.length - 1]
+			delete folderPathList[folderPathList.length - 1]
+			const folderPath = `/${folderPathList.join('/')}`
+			const Hash = await uploadToDstor(fileStream, fileName, folderPath)
+			console.log('Hash is: ', Hash)
+			ongoingProcessedJson.video.files[file] = Hash
+		} catch (err) {
+			console.log('dStor upload failed for ', file, 'with err: ', err)
+			allCompleted = false
+		}
+	}
+	ongoingProcessedJson.video.progress = allCompleted
+		? 'TRANSCODED_FILES_DSTOR_UPLOAD_COMPLETE'
+		: 'TRANSCODED_FILES_DSTOR_UPLOAD_INCOMPLETE'
+	for (const file in ongoingProcessedJson.video.files) {
+		const filePathSegments = file.split('/')
+		const fileName = filePathSegments[filePathSegments.length - 1]
+		playlist.contents = playlist.contents.replace(
+			fileName,
+			`${DSTOR_API_URL}/ipfs/${ongoingProcessedJson.video.files[file]}`
+		)
+	}
+	try {
+		fs.writeFileSync(
+			`public/videos/processed/stream/${playlist.path}`,
+			playlist.contents
+		)
+		const folderPathList = playlist.path.split('/')
+		const fileName = folderPathList[folderPathList.length - 1]
+		delete folderPathList[folderPathList.length - 1]
+		const folderPath = `/${folderPathList.join('/')}`
+		const Hash = await uploadToDstor(
+			Buffer.from(playlist.contents),
+			fileName,
+			folderPath
+		)
+		console.log('Hash is: ', Hash)
+		ongoingProcessedJson.video.files[playlist.path] = Hash
+	} catch (err) {
+		console.log('dStor upload failed for playlist with err: ', err)
+		allCompleted = false
+	}
+	video.processed = JSON.stringify(ongoingProcessedJson)
+	video.save()
+}
+
 module.exports = {
 	replaceM3u8Links,
 	getCreateJobJSON,
@@ -212,4 +312,6 @@ module.exports = {
 	getS3ObjectPromise,
 	getS3ObjectAttempt,
 	multiTryS3Download,
+	uploadThumbnailsToDstor,
+	uploadVideoToDstor,
 }
