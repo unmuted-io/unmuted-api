@@ -12,7 +12,12 @@ const AWS = require('aws-sdk')
 const CronJob = require('cron').CronJob
 const videoUtils = require('../../../utils/video')
 const dstorUtils = require('../../../utils/dstor')
-const { getCreateJobJSON } = videoUtils
+const {
+	getCreateJobJSON,
+	getObjectsList,
+	getS3ObjectPromise,
+	multiTryS3Download,
+} = videoUtils
 const { uploadToDstor } = dstorUtils
 
 // Use bluebird implementation of Promise
@@ -59,15 +64,6 @@ class MediaController {
 		})
 	}
 
-	getObject(params) {
-		return new Promise((resolve, reject) => {
-			s3.getObject(params, (err, data) => {
-				if (err) reject(err)
-				resolve(data)
-			})
-		})
-	}
-
 	async message({ request, response }) {
 		const rawBody = request.raw()
 		const body = JSON.parse(rawBody)
@@ -76,43 +72,34 @@ class MediaController {
 		const { rand, time } = userMetadata
 		const video = await Video.findBy({ rand })
 		const ongoingProcessedJson = JSON.parse(video.processed)
-		if (ongoingProcessedJson.progress === 'TRANSCODING_COMPLETE') return
+		if (ongoingProcessedJson.video.progress === 'TRANSCODING_COMPLETE') return
 		const progressMap = {
 			PROGRESSING: 'TRANSCODING_IN_PROGRESS',
 			COMPLETED: 'TRANSCODING_COMPLETE',
 		}
 
-		ongoingProcessedJson.progress = progressMap[state]
-		ongoingProcessedJson.files = {}
+		ongoingProcessedJson.video.progress = progressMap[state]
+		ongoingProcessedJson.video.files = {}
 		video.processed = JSON.stringify(ongoingProcessedJson)
 		await video.save()
 		// done transcoding
 		if (state === 'COMPLETED') {
 			console.log('COMPLETED')
-			const Prefix = `a/${video.user_id}/${time}-${rand}/400k`
-			const listObjects = () => {
-				return new Promise((resolve, reject) => {
-					s3.listObjects(
-						{
-							Bucket: process.env.S3_PROCESSED_BUCKET,
-							Prefix,
-						},
-						(err, data) => {
-							if (err) reject(err)
-							resolve(data)
-						}
-					)
-				})
-			}
 
-			const bucketObjects = await listObjects()
+			const Prefix = `a/${video.user_id}/${time}-${rand}/400k`
+			const inputBucketConfig = {
+				Prefix,
+				Bucket: process.env.S3_PROCESSED_BUCKET,
+			}
+			const bucketObjects = await getObjectsList(inputBucketConfig)
 			console.log('completed bucketObjects: ', bucketObjects)
 
 			/////////////////////////
 			const { Contents } = bucketObjects
 			const objectsToGet = Contents.map((file, index) => {
 				const fileKey = file.Key.replace(Prefix, '')
-				ongoingProcessedJson.files[file.Key] = 'TRANSCODED_FILE_REGISTERED'
+				ongoingProcessedJson.video.files[file.Key] =
+					'TRANSCODED_FILE_REGISTERED'
 				return {
 					file,
 					fileKey,
@@ -120,7 +107,7 @@ class MediaController {
 					index,
 				}
 			})
-			ongoingProcessedJson.progress = 'TRANSCODED_FILES_REGISTERED'
+			ongoingProcessedJson.video.progress = 'TRANSCODED_FILES_REGISTERED'
 			try {
 				video.processed = JSON.stringify(ongoingProcessedJson)
 				await video.save()
@@ -128,34 +115,6 @@ class MediaController {
 				console.log('video save error: ', err)
 			}
 			console.log('objectsToGet: ', objectsToGet)
-			const getObjectAttempt = (Key, objectIndex, resultIndex) => {
-				const params = {
-					Bucket: process.env.S3_PROCESSED_BUCKET,
-					Key,
-				}
-				return new Promise((resolve, reject) => {
-					const getObject = async (iterator = 0) => {
-						try {
-							const result = await this.getObject(params)
-							resolve({
-								result,
-								resultIndex,
-								objectIndex,
-								Key,
-							})
-						} catch (err) {
-							console.log('getObject error: ', err)
-							if (iterator < 10) {
-								setTimeout(() => getObject(iterator), 1000)
-								iterator++
-							} else {
-								reject(false)
-							}
-						}
-					}
-					getObject()
-				})
-			}
 
 			fs.mkdirSync(
 				`public/videos/processed/stream/${Prefix}`,
@@ -164,113 +123,15 @@ class MediaController {
 					console.log('mkdir err: ', err)
 				}
 			)
-
-			let promisesToGet = []
-			const finalResults = {}
-			let writeIterator = 0
-			const indicesToGet = objectsToGet.length - 1
-			const maxIteration = indicesToGet < 4 ? indicesToGet : 4
-			for (let objectIndex = 0; objectIndex < maxIteration; objectIndex++) {
-				const fileKey = objectsToGet[objectIndex].file.Key
-				promisesToGet.push(getObjectAttempt(fileKey, objectIndex, objectIndex))
-			}
-			let masterIterator = maxIteration
-			let finished = 0
-			while (
-				promisesToGet.length > 0 &&
-				writeIterator < objectsToGet.length + 1
-			) {
-				console.log('masterIterator: ', masterIterator)
-				console.log('writeIterator: ', writeIterator)
-				try {
-					// await for next resolve
-					const value = await Promise.race(promisesToGet)
-					const { result, resultIndex, Key, objectIndex } = value
-					finalResults[objectIndex] = result.Etag
-					fs.writeFile(
-						`public/videos/processed/stream/${Key}`,
-						result.Body,
-						(err) => {
-							if (err) {
-								console.log(`writeFile error for file ${Key}: `, err)
-							} else {
-								ongoingProcessedJson.files[Key] = 'TRANSCODED_FILE_DOWNLOADED'
-								writeIterator++
-							}
-						}
-					)
-					finished++
-					if (finished === objectsToGet.length - 1) {
-						console.log('FINISHED!')
-						console.log('finalResults: ', finalResults)
-						return
-					}
-					if (masterIterator < objectsToGet.length - 1) {
-						promisesToGet[resultIndex] = getObjectAttempt(
-							objectsToGet[masterIterator].file.Key,
-							masterIterator,
-							resultIndex
-						)
-						masterIterator++
-					} else {
-						promisesToGet[resultIndex] = getObjectAttempt(
-							objectsToGet[masterIterator].file.Key,
-							masterIterator,
-							resultIndex
-						)
-						const finalValues = await Promise.all(promisesToGet)
-						promisesToGet = []
-						finalValues.forEach((value) => {
-							const { result, resultIndex, Key, objectIndex } = value
-							console.log(
-								'result is: ',
-								result,
-								'result index is: ',
-								resultIndex
-							)
-							finalResults[objectIndex] = result.Etag
-							fs.writeFile(
-								`public/videos/processed/stream/${Key}`,
-								result.Body,
-								async (err) => {
-									if (err) {
-										console.log('writeFile error: ', err)
-									} else {
-										console.log('last files being written')
-										ongoingProcessedJson.files[Key] =
-											'TRANSCODED_FILE_DOWNLOADED'
-										if (writeIterator === objectsToGet.length - 1) {
-											console.log('last file save clause being executed')
-											let fileDownloadProgress =
-												'TRANSCODED_FILES_DOWNLOAD_COMPLETE'
-											Object.values(ongoingProcessedJson.files).forEach(
-												(status) => {
-													if (status !== 'TRANSCODED_FILE_DOWNLOADED') {
-														fileDownloadProgress =
-															'TRANSCODED_FILES_PARTIAL_DOWNLOAD'
-													}
-												}
-											)
-											ongoingProcessedJson.progress = fileDownloadProgress
-											video.processed = JSON.stringify(ongoingProcessedJson)
-											await video.save()
-											this.uploadVideoToDstor(rand)
-										}
-										writeIterator++
-									}
-								}
-							)
-							finished++
-						})
-					}
-				} catch (err) {
-					console.log(err)
-				}
-			}
-
-			/////////////////////////
-			// now upload to dStor //
-			/////////////////////////
+			const writePrefix = 'public/videos/processed/stream'
+			await multiTryS3Download(
+				objectsToGet,
+				writePrefix,
+				ongoingProcessedJson.video
+			)
+			video.processed = JSON.stringify(ongoingProcessedJson)
+			await video.save()
+			this.uploadVideoToDstor(rand)
 		}
 	}
 
@@ -278,7 +139,7 @@ class MediaController {
 		const { DSTOR_API_URL } = process.env
 		const video = await Video.findBy({ rand })
 		const ongoingProcessedJson = JSON.parse(video.processed)
-		const { files } = ongoingProcessedJson
+		const { files } = ongoingProcessedJson.video
 		let allCompleted = true
 		const playlist = {}
 
@@ -298,21 +159,21 @@ class MediaController {
 				const folderPath = `/${folderPathList.join('/')}`
 				const Hash = await uploadToDstor(fileStream, fileName, folderPath)
 				console.log('Hash is: ', Hash)
-				ongoingProcessedJson.files[file] = Hash
+				ongoingProcessedJson.video.files[file] = Hash
 			} catch (err) {
 				console.log('dStor upload failed for ', file, 'with err: ', err)
 				allCompleted = false
 			}
 		}
-		ongoingProcessedJson.progress = allCompleted
+		ongoingProcessedJson.video.progress = allCompleted
 			? 'TRANSCODED_FILES_DSTOR_UPLOAD_COMPLETE'
 			: 'TRANSCODED_FILES_DSTOR_UPLOAD_INCOMPLETE'
-		for (const file in ongoingProcessedJson.files) {
+		for (const file in ongoingProcessedJson.video.files) {
 			const filePathSegments = file.split('/')
 			const fileName = filePathSegments[filePathSegments.length - 1]
 			playlist.contents = playlist.contents.replace(
 				fileName,
-				`${DSTOR_API_URL}/ipfs/${ongoingProcessedJson.files[file]}`
+				`${DSTOR_API_URL}/ipfs/${ongoingProcessedJson.video.files[file]}`
 			)
 		}
 		try {
@@ -330,7 +191,7 @@ class MediaController {
 				folderPath
 			)
 			console.log('Hash is: ', Hash)
-			ongoingProcessedJson.files[playlist.path] = Hash
+			ongoingProcessedJson.video.files[playlist.path] = Hash
 		} catch (err) {
 			console.log('dStor upload failed for playlist with err: ', err)
 			allCompleted = false
@@ -407,11 +268,11 @@ class MediaController {
 				Key: `a/${user.id}/${source}`,
 			}
 
-			const getObjectData = await this.getObject(getObjectParams)
+			const getObjectData = await getS3ObjectPromise(getObjectParams)
 			console.log('getObjectData: ', getObjectData)
 			this.ws.send(20)
 			// create entry in db
-			const ongoingProcessedJson = { progress: 'UPLOADED' }
+			const ongoingProcessedJson = { video: { progress: 'UPLOADED' } }
 			video = await Video.create({
 				source,
 				rand,
@@ -453,7 +314,10 @@ class MediaController {
 			}
 
 			await createJob()
-			ongoingProcessedJson.progress = 'TRANSCODING_STARTED'
+			ongoingProcessedJson.video = {
+				progress: 'TRANSCODING_STARTED',
+				files: {},
+			}
 			video.processed = JSON.stringify(ongoingProcessedJson)
 			await video.save()
 		} catch (error) {

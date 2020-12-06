@@ -42,7 +42,7 @@ class Cron extends Command {
 				await Database.table('users')
 					.where('id', confirmationRow[0].user_id)
 					.update({ telos_account_name: from })
-				await Database.table('users')
+				await Database.table('confirmations')
 					.where('id', confirmationRow[0].user_id)
 					.del()
 			}
