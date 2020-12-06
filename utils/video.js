@@ -35,7 +35,7 @@ const getCreateJobJSON = ({ time, userId, source, rand }) => {
 		Outputs: [
 			{
 				Key: `/400k/${timeAndRand}`, // folder and specific playlist m3u8 name
-				ThumbnailPattern: `/${timeAndRand}/thumb_{count}`,
+				ThumbnailPattern: '/thumbnails/thumb_{count}',
 				Rotate: 'auto',
 				PresetId: '1607203222250-n0nyn6',
 				SegmentDuration: '10',
@@ -81,9 +81,9 @@ const getS3ObjectPromise = (params) => {
 	})
 }
 
-const getS3ObjectAttempt = async (Key, objectIndex, resultIndex) => {
+const getS3ObjectAttempt = async (Key, objectIndex, resultIndex, bucket) => {
 	const params = {
-		Bucket: process.env.S3_PROCESSED_BUCKET,
+		Bucket: bucket,
 		Key,
 	}
 	return new Promise((resolve, reject) => {
@@ -113,7 +113,8 @@ const getS3ObjectAttempt = async (Key, objectIndex, resultIndex) => {
 const multiTryS3Download = async (
 	objectsToGet,
 	writePrefix,
-	progressObject
+	progressObject,
+	bucket
 ) => {
 	let promisesToGet = []
 	const finalResults = {}
@@ -122,7 +123,9 @@ const multiTryS3Download = async (
 	const maxIteration = indicesToGet < 4 ? indicesToGet : 4
 	for (let objectIndex = 0; objectIndex < maxIteration; objectIndex++) {
 		const fileKey = objectsToGet[objectIndex].file.Key
-		promisesToGet.push(getS3ObjectAttempt(fileKey, objectIndex, objectIndex))
+		promisesToGet.push(
+			getS3ObjectAttempt(fileKey, objectIndex, objectIndex, bucket)
+		)
 	}
 	let masterIterator = maxIteration
 	let finished = 0
@@ -152,14 +155,16 @@ const multiTryS3Download = async (
 				promisesToGet[resultIndex] = getS3ObjectAttempt(
 					objectsToGet[masterIterator].file.Key,
 					masterIterator,
-					resultIndex
+					resultIndex,
+					bucket
 				)
 				masterIterator++
 			} else {
 				promisesToGet[resultIndex] = getS3ObjectAttempt(
 					objectsToGet[masterIterator].file.Key,
 					masterIterator,
-					resultIndex
+					resultIndex,
+					bucket
 				)
 				const finalValues = await Promise.all(promisesToGet)
 				promisesToGet = []

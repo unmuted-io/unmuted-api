@@ -86,18 +86,18 @@ class MediaController {
 		if (state === 'COMPLETED') {
 			console.log('COMPLETED')
 
-			const Prefix = `a/${video.user_id}/${time}-${rand}/400k`
+			const videoPrefix = `a/${video.user_id}/${time}-${rand}/400k`
 			const inputBucketConfig = {
-				Prefix,
-				Bucket: process.env.S3_PROCESSED_BUCKET,
+				Prefix: videoPrefix,
+				Bucket: process.env.S3_PROCESSED_VIDEO_BUCKET,
 			}
-			const bucketObjects = await getObjectsList(inputBucketConfig)
-			console.log('completed bucketObjects: ', bucketObjects)
+			const videoBucketObjects = await getObjectsList(inputBucketConfig)
+			console.log('completed videoBucketObjects: ', videoBucketObjects)
 
 			/////////////////////////
-			const { Contents } = bucketObjects
-			const objectsToGet = Contents.map((file, index) => {
-				const fileKey = file.Key.replace(Prefix, '')
+			const { Contents: videoContents } = videoBucketObjects
+			const videoObjectsToGet = videoContents.map((file, index) => {
+				const fileKey = file.Key.replace(videoPrefix, '')
 				ongoingProcessedJson.video.files[file.Key] =
 					'TRANSCODED_FILE_REGISTERED'
 				return {
@@ -114,10 +114,10 @@ class MediaController {
 			} catch (err) {
 				console.log('video save error: ', err)
 			}
-			console.log('objectsToGet: ', objectsToGet)
+			console.log('videoObjectsToGet: ', videoObjectsToGet)
 
 			fs.mkdirSync(
-				`public/videos/processed/stream/${Prefix}`,
+				`public/videos/processed/stream/${videoPrefix}`,
 				{ recursive: true },
 				(err) => {
 					console.log('mkdir err: ', err)
@@ -125,13 +125,64 @@ class MediaController {
 			)
 			const writePrefix = 'public/videos/processed/stream'
 			await multiTryS3Download(
-				objectsToGet,
+				videoObjectsToGet,
 				writePrefix,
-				ongoingProcessedJson.video
+				ongoingProcessedJson.video,
+				process.env.S3_PROCESSED_VIDEO_BUCKET
 			)
 			video.processed = JSON.stringify(ongoingProcessedJson)
 			await video.save()
 			this.uploadVideoToDstor(rand)
+
+			// now do thumbnails
+			const thumbnailPrefix = `a/${video.user_id}/${time}-${rand}`
+
+			const thumbnailInputBucketConfig = {
+				Prefix: thumbnailPrefix,
+				Bucket: process.env.S3_THUMBNAILS_BUCKET,
+			}
+			const thumbnailBucketObjects = await getObjectsList(
+				thumbnailInputBucketConfig
+			)
+			console.log('completed thumbnailBucketObjects: ', thumbnailBucketObjects)
+
+			/////////////////////////
+			const { Contents: thumbnailContents } = thumbnailBucketObjects
+			const thumbnailObjectsToGet = thumbnailContents.map((file, index) => {
+				const fileKey = file.Key.replace(thumbnailPrefix, '')
+				ongoingProcessedJson.thumbnails.files[file.Key] = 'FILE_REGISTERED'
+				return {
+					file,
+					fileKey,
+					progress: false,
+					index,
+				}
+			})
+			ongoingProcessedJson.thumbnails.progress = 'FILES_REGISTERED'
+			try {
+				video.processed = JSON.stringify(ongoingProcessedJson)
+				await video.save()
+			} catch (err) {
+				console.log('video save error: ', err)
+			}
+			console.log('thumbnailObjectsToGet: ', thumbnailObjectsToGet)
+
+			fs.mkdirSync(
+				`public/videos/processed/stream/${thumbnailPrefix}/thumbnails`,
+				{ recursive: true },
+				(err) => {
+					console.log('mkdir err: ', err)
+				}
+			)
+			await multiTryS3Download(
+				thumbnailObjectsToGet,
+				writePrefix,
+				ongoingProcessedJson.thumbnails,
+				process.env.S3_THUMBNAILS_BUCKET
+			)
+			video.processed = JSON.stringify(ongoingProcessedJson)
+			await video.save()
+			// this.uploadVideoToDstor(rand)
 		}
 	}
 
@@ -272,7 +323,10 @@ class MediaController {
 			console.log('getObjectData: ', getObjectData)
 			this.ws.send(20)
 			// create entry in db
-			const ongoingProcessedJson = { video: { progress: 'UPLOADED' } }
+			const ongoingProcessedJson = {
+				video: { progress: 'UPLOADED' },
+				thumbnails: {},
+			}
 			video = await Video.create({
 				source,
 				rand,
@@ -316,6 +370,10 @@ class MediaController {
 			await createJob()
 			ongoingProcessedJson.video = {
 				progress: 'TRANSCODING_STARTED',
+				files: {},
+			}
+			ongoingProcessedJson.thumbnails = {
+				progress: 'NOT_STARTED',
 				files: {},
 			}
 			video.processed = JSON.stringify(ongoingProcessedJson)
