@@ -125,7 +125,7 @@ const multiTryS3Download = async (
 	let writeIterator = 0
 	const indicesToGet = objectsToGet.length - 1
 	const maxIteration = indicesToGet < 4 ? indicesToGet : 4
-	for (let objectIndex = 0; objectIndex < maxIteration; objectIndex++) {
+	for (let objectIndex = 0; objectIndex <= maxIteration; objectIndex++) {
 		const fileKey = objectsToGet[objectIndex].file.Key
 		promisesToGet.push(
 			getS3ObjectAttempt(fileKey, objectIndex, objectIndex, bucket)
@@ -150,7 +150,7 @@ const multiTryS3Download = async (
 				}
 			})
 			finished++
-			if (finished === objectsToGet.length - 1) {
+			if (finished === objectsToGet.length) {
 				console.log('FINISHED!')
 				console.log('finalResults: ', finalResults)
 				return
@@ -191,6 +191,7 @@ const multiTryS3Download = async (
 									}
 								})
 								progressObject.progress = fileDownloadProgress
+
 								return progressObject
 							}
 							writeIterator++
@@ -210,12 +211,10 @@ const multiTryS3Download = async (
 }
 
 const uploadThumbnailsToDstor = async (rand) => {
-	const { DSTOR_API_URL } = process.env
 	const video = await Video.findBy({ rand })
 	const ongoingProcessedJson = JSON.parse(video.processed)
 	const { files } = ongoingProcessedJson.thumbnails
 	let allCompleted = true
-	const playlist = {}
 
 	for (const file in files) {
 		const filePath = `public/videos/processed/stream/${file}`
@@ -240,10 +239,8 @@ const uploadThumbnailsToDstor = async (rand) => {
 	video.save()
 }
 
-const uploadVideoToDstor = async (rand) => {
+const uploadVideoToDstor = async (rand, ongoingProcessedJson) => {
 	const { DSTOR_API_URL } = process.env
-	const video = await Video.findBy({ rand })
-	const ongoingProcessedJson = JSON.parse(video.processed)
 	const { files } = ongoingProcessedJson.video
 	let allCompleted = true
 	const playlist = {}
@@ -271,8 +268,8 @@ const uploadVideoToDstor = async (rand) => {
 		}
 	}
 	ongoingProcessedJson.video.progress = allCompleted
-		? 'TRANSCODED_FILES_DSTOR_UPLOAD_COMPLETE'
-		: 'TRANSCODED_FILES_DSTOR_UPLOAD_INCOMPLETE'
+		? 'FILES_DSTOR_UPLOAD_COMPLETE'
+		: 'FILES_DSTOR_UPLOAD_INCOMPLETE'
 	for (const file in ongoingProcessedJson.video.files) {
 		const filePathSegments = file.split('/')
 		const fileName = filePathSegments[filePathSegments.length - 1]
@@ -301,8 +298,7 @@ const uploadVideoToDstor = async (rand) => {
 		console.log('dStor upload failed for playlist with err: ', err)
 		allCompleted = false
 	}
-	video.processed = JSON.stringify(ongoingProcessedJson)
-	video.save()
+	return
 }
 
 module.exports = {
