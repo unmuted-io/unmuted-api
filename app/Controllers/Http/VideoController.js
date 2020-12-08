@@ -56,6 +56,7 @@ class VideoController {
 				'videos.source',
 				'videos.created_at',
 				'videos.duration',
+				'videos.processed',
 				'users.username',
 				'users.profile',
 			])
