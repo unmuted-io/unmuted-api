@@ -62,6 +62,9 @@ class MediaController {
 		this.ws.on('message', (data) => {
 			// console.log(`controller received messgae: ${data}`)
 		})
+		this.ws.sendJSON = (obj) => {
+			this.ws.send(JSON.stringify(obj))
+		}
 	}
 
 	async message({ request, response }) {
@@ -245,7 +248,7 @@ class MediaController {
 					'There was an error uploading your video. Please try again later.',
 			})
 		}
-		this.ws.send(10)
+		this.ws.sendJSON({ progress: 10 })
 		// create the entry in the database
 		let video
 		let progress = 0
@@ -277,7 +280,7 @@ class MediaController {
 
 			const getObjectData = await getS3ObjectPromise(getObjectParams)
 			console.log('getObjectData: ', getObjectData)
-			this.ws.send(20)
+			this.ws.sendJSON({ progress: 20 })
 			// create entry in db
 			const ongoingProcessedJson = {
 				video: { progress: 'UPLOADED' },
@@ -293,20 +296,19 @@ class MediaController {
 				processed: JSON.stringify(ongoingProcessedJson),
 				hash: rand,
 			})
-			this.ws.send(50)
+			this.ws.sendJSON({ progress: 50 })
 			console.log('video: ', video.toJSON())
 			const newView = new View()
 			newView.video_id = video.id
 			newView.user_id = 1
 			newView.last_position = 0
 			await newView.save()
-			this.ws.send(60)
-			this.ws.send('complete: ', rand)
+			this.ws.sendJSON({ progress: 60 })
 			response.status(200).send({
 				video,
 			})
+			this.ws.sendJSON({ progress: 100, rand })
 
-			response.send(rand)
 			const createJobInput = getCreateJobJSON({
 				userId: user.id,
 				time,
