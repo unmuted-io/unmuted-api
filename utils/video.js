@@ -236,6 +236,7 @@ const uploadThumbnailsToDstor = async (rand) => {
 		? 'FILES_DSTOR_UPLOAD_COMPLETE'
 		: 'FILES_DSTOR_UPLOAD_INCOMPLETE'
 	video.processed = JSON.stringify(ongoingProcessedJson)
+	video.is_active = true
 	video.save()
 }
 

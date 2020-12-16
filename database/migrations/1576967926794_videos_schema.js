@@ -20,6 +20,7 @@ class VideosSchema extends Schema {
 				.notNullable()
 			table.integer('duration').unsigned().notNullable().defaultTo(0)
 			table.json('processed').defaultTo()
+			table.boolean('is_active').defaultTo(false)
 			table.increments()
 			table.timestamps()
 		})
