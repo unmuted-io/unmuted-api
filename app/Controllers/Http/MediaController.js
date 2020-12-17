@@ -5,11 +5,7 @@ const crypto = require('crypto')
 const base32 = require('hi-base32')
 const fs = require('fs')
 const WebSocket = require('ws')
-const ffmpeg = require('fluent-ffmpeg')
-const VideoChatController = require('./VideoChatController')
-const VideoChat = new VideoChatController() // instantiates websockets
 const AWS = require('aws-sdk')
-const CronJob = require('cron').CronJob
 const videoUtils = require('../../../utils/video')
 const {
 	getCreateJobJSON,
@@ -47,23 +43,34 @@ class MediaController {
 		this.AWS_BUCKET_NAME = AWS_BUCKET_NAME
 		console.log('in VideoController constructor')
 		this.ws = new WebSocket('ws://localhost:9824')
+		this.ws.isOpen = false
 		this.ws.on('open', () => {
-			console.log('controller connected')
+			console.log('controller websocket opened')
+			this.ws.isOpen = true
 		})
 
 		this.ws.on('close', function close() {
-			console.log('controller disconnected')
+			console.log('controller websocket disconnected')
 		})
 
 		this.ws.on('error', (error) => {
-			console.log('controller ereror: ', error)
+			console.log('controller websocket error: ', error)
 		})
 
 		this.ws.on('message', (data) => {
-			// console.log(`controller received messgae: ${data}`)
+			if (data === 'in the browser right now') {
+				this.ws.messages.forEach((element) => {
+					this.ws.send(element)
+				})
+			}
 		})
+		this.ws.messages = []
 		this.ws.sendJSON = (obj) => {
-			this.ws.send(JSON.stringify(obj))
+			if (this.ws.isOpen) {
+				this.ws.send(JSON.stringify(obj))
+			} else {
+				this.ws.messages.push(JSON.stringify(obj))
+			}
 		}
 	}
 
