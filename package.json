@@ -37,7 +37,7 @@
     "@rocketseat/adonis-bull": "^0.2.2",
     "@typescript-eslint/eslint-plugin": "^2.26.0",
     "@typescript-eslint/parser": "^2.27.0",
-    "aws-sdk": "^2.797.0",
+    "aws-sdk": "^2.814.0",
     "axios": "^0.19.2",
     "bluebird": "^3.7.2",
     "cron": "^1.8.2",
